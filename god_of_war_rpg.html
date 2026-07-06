@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0806; color: #e8d5b0; font-family: 'Georgia', serif; overflow: hidden; user-select: none; }
+  canvas { display: block; }
+  #ui { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; }
+  #hud { display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 16px; }
+  .bar-wrap { display: flex; flex-direction: column; gap: 4px; }
+  .bar-label { font-size: 10px; letter-spacing: 2px; color: #8a7055; text-transform: uppercase; }
+  .bar-outer { width: 160px; height: 8px; background: rgba(0,0,0,0.6); border: 1px solid #3a2a1a; border-radius: 2px; overflow: hidden; }
+  .bar-inner { height: 100%; border-radius: 2px; transition: width 0.2s; }
+  #hp-bar { background: linear-gradient(90deg, #8b1a1a, #d44); }
+  #rage-bar { background: linear-gradient(90deg, #8b5a00, #f90); }
+  #enemy-hud { text-align: right; }
+  #combo-display { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; }
+  #combo-text { font-size: 48px; font-weight: bold; color: #f90; text-shadow: 0 0 20px #f90, 0 0 40px #f60; opacity: 0; transition: opacity 0.3s; letter-spacing: 4px; }
+  #combo-count { font-size: 14px; color: #c8a060; letter-spacing: 3px; }
+  #controls { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; pointer-events: auto; }
+  .btn { padding: 8px 16px; background: rgba(20,12,4,0.9); border: 1px solid #4a3020; color: #c8a060; font-size: 11px; letter-spacing: 1px; cursor: pointer; border-radius: 2px; font-family: Georgia, serif; transition: all 0.15s; }
+  .btn:hover { background: rgba(80,40,10,0.9); border-color: #8a6040; color: #e8d0a0; }
+  .btn:active { transform: scale(0.96); }
+  .btn-rage { border-color: #8b3a00; color: #f90; }
+  .btn-rage:hover { background: rgba(120,50,0,0.9); }
+  #msg { position: absolute; top: 100px; left: 50%; transform: translateX(-50%); font-size: 13px; color: #c8a060; letter-spacing: 2px; opacity: 0; transition: opacity 0.5s; text-align: center; pointer-events: none; }
+  #title-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #050302; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
+  #title-screen h1 { font-size: 42px; letter-spacing: 8px; color: #c8802a; text-shadow: 0 0 30px #8b4010; }
+  #title-screen p { color: #6a5040; letter-spacing: 3px; font-size: 12px; }
+  #start-btn { padding: 12px 32px; background: rgba(80,30,0,0.8); border: 1px solid #8b5020; color: #e8b060; font-size: 14px; letter-spacing: 3px; cursor: pointer; font-family: Georgia; border-radius: 2px; pointer-events: auto; transition: all 0.2s; }
+  #start-btn:hover { background: rgba(120,50,10,0.9); color: #fff; box-shadow: 0 0 20px #8b4010; }
+  #boss-announce { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 12px; }
+  #boss-announce h2 { font-size: 36px; color: #cc2200; letter-spacing: 6px; text-shadow: 0 0 30px #ff2200; animation: pulse 0.5s infinite alternate; }
+  @keyframes pulse { from { opacity: 0.7; } to { opacity: 1; } }
+  #boss-announce p { color: #886040; letter-spacing: 2px; font-size: 13px; }
+  #wave-info { position: absolute; top: 50px; left: 50%; transform: translateX(-50%); font-size: 11px; letter-spacing: 3px; color: #6a5030; }
+  #skill-bar { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; pointer-events: auto; }
+  .skill-btn { width: 44px; height: 44px; background: rgba(10,6,2,0.9); border: 1px solid #3a2010; border-radius: 4px; color: #8a6040; font-size: 9px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; transition: all 0.15s; position: relative; }
+  .skill-btn:hover { border-color: #8a5020; color: #c8a060; }
+  .skill-btn .key { font-size: 11px; font-weight: bold; color: #c8a060; }
+  .skill-btn.on-cooldown { opacity: 0.4; }
+  .skill-cd { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #ff8; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div id="hud">
+    <div class="bar-wrap">
+      <div class="bar-label">Ares — Ghost of Sparta</div>
+      <div class="bar-outer"><div class="bar-inner" id="hp-bar" style="width:100%"></div></div>
+      <div class="bar-outer" style="margin-top:2px"><div class="bar-inner" id="rage-bar" style="width:0%"></div></div>
+    </div>
+    <div id="wave-info">WAVE 1</div>
+    <div class="bar-wrap" id="enemy-hud">
+      <div class="bar-label" id="enemy-label">ENEMY</div>
+      <div class="bar-outer"><div class="bar-inner" id="enemy-hp-bar" style="width:100%;background:linear-gradient(90deg,#3a8b3a,#6f6)"></div></div>
+    </div>
+  </div>
+  <div id="combo-display">
+    <div id="combo-text">SPARTAN RAGE</div>
+    <div id="combo-count"></div>
+  </div>
+  <div id="msg"></div>
+  <div id="skill-bar">
+    <div class="skill-btn" id="sb-q" onclick="useSkill('q')"><span class="key">Q</span><span>Slam</span></div>
+    <div class="skill-btn" id="sb-e" onclick="useSkill('e')"><span class="key">E</span><span>Spin</span></div>
+    <div class="skill-btn" id="sb-r" onclick="useSkill('r')"><span class="key">R</span><span>Rage</span></div>
+    <div class="skill-btn" id="sb-f" onclick="useSkill('f')"><span class="key">F</span><span>Rune</span></div>
+  </div>
+  <div id="controls">
+    <div class="btn" onclick="doAction('attack')">⚔ ATTACK [A]</div>
+    <div class="btn" onclick="doAction('block')">🛡 BLOCK [S]</div>
+    <div class="btn" onclick="doAction('dodge')">💨 DODGE [D]</div>
+  </div>
+  <div id="boss-announce">
+    <h2 id="boss-name">ARES AWAKENS</h2>
+    <p id="boss-sub">God of War descends upon you</p>
+  </div>
+</div>
+<div id="title-screen">
+  <h1>SPARTAN'S WRATH</h1>
+  <p>A TALE OF BLOOD AND GODS</p>
+  <div style="height:20px"></div>
+  <button id="start-btn" onclick="startGame()">BEGIN YOUR ODYSSEY</button>
+  <p style="margin-top:12px;font-size:10px">WASD/ARROWS · A=Attack · S=Block · D=Dodge · Q/E/R/F=Skills</p>
+</div>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight - 0;
+canvas.style.width = '100%';
+
+const W = canvas.width, H = canvas.height;
+let gameState = 'title';
+let animFrame;
+
+const keys = {};
+document.addEventListener('keydown', e => {
+  keys[e.key.toLowerCase()] = true;
+  if (gameState !== 'playing') return;
+  if (e.key.toLowerCase() === 'a') doAction('attack');
+  if (e.key.toLowerCase() === 's') doAction('block');
+  if (e.key.toLowerCase() === 'd') doAction('dodge');
+  if (e.key.toLowerCase() === 'q') useSkill('q');
+  if (e.key.toLowerCase() === 'e') useSkill('e');
+  if (e.key.toLowerCase() === 'r') useSkill('r');
+  if (e.key.toLowerCase() === 'f') useSkill('f');
+});
+document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+const player = {
+  x: W * 0.25, y: H * 0.5,
+  hp: 100, maxHp: 100,
+  rage: 0, maxRage: 100,
+  combo: 0, comboTimer: 0,
+  isBlocking: false, isAttacking: false, isDodging: false,
+  vx: 0, vy: 0,
+  facing: 1,
+  attackAnim: 0, dodgeAnim: 0, hurtAnim: 0,
+  rageMode: false, rageTimer: 0,
+  invincible: 0,
+  width: 36, height: 56
+};
+
+const cooldowns = { q: 0, e: 0, r: 0, f: 0 };
+const maxCD = { q: 180, e: 240, r: 400, f: 300 };
+
+const particles = [];
+const floaters = [];
+const slashEffects = [];
+const enemies = [];
+
+let wave = 1;
+let bossWave = false;
+let waveTimer = 0;
+let cameraX = 0, cameraY = 0;
+let targetCamX = 0, targetCamY = 0;
+let bgScroll = 0;
+let screenShake = 0;
+let flashAlpha = 0;
+let flashColor = '#fff';
+
+const ENEMY_TYPES = {
+  grunt: { name: 'Undead Soldier', hp: 40, maxHp: 40, atk: 8, speed: 1.1, width: 30, height: 48, color: '#4a7a4a', xp: 10, size: 'small' },
+  warrior: { name: 'Olympian Guard', hp: 80, maxHp: 80, atk: 14, speed: 0.8, width: 36, height: 54, color: '#7a6a30', xp: 25, size: 'medium' },
+  titan: { name: 'Stone Titan', hp: 200, maxHp: 200, atk: 25, speed: 0.4, width: 56, height: 80, color: '#6a5a4a', xp: 60, size: 'large' },
+  boss_ares: { name: 'ARES — GOD OF WAR', hp: 500, maxHp: 500, atk: 35, speed: 1.2, width: 64, height: 96, color: '#8b1a1a', xp: 200, size: 'boss' },
+  boss_zeus: { name: 'ZEUS — KING OF GODS', hp: 700, maxHp: 700, atk: 45, speed: 1.0, width: 72, height: 104, color: '#1a3a8b', xp: 350, size: 'boss' },
+};
+
+function spawnEnemy(type, x, y) {
+  const t = ENEMY_TYPES[type];
+  return {
+    ...JSON.parse(JSON.stringify(t)), type,
+    x: x || W * 0.75 + Math.random() * 200,
+    y: y || H * 0.3 + Math.random() * (H * 0.4),
+    vx: 0, vy: 0,
+    attackTimer: 60 + Math.random() * 80,
+    hurtAnim: 0, attackAnim: 0,
+    phase: 1, phaseSwitch: false,
+    stunTimer: 0,
+    id: Math.random()
+  };
+}
+
+function spawnWave(w) {
+  enemies.length = 0;
+  bossWave = false;
+  if (w % 3 === 0) {
+    bossWave = true;
+    const bossType = w === 3 ? 'boss_ares' : 'boss_zeus';
+    const boss = spawnEnemy(bossType, W * 0.7, H * 0.5);
+    enemies.push(boss);
+    showBossAnnounce(boss.name, w === 3 ? 'Spiller of blood, wielder of death' : 'Lord of lightning, destroyer of men');
+    return;
+  }
+  const count = 2 + w;
+  const types = w <= 2 ? ['grunt'] : w <= 4 ? ['grunt', 'warrior'] : ['warrior', 'titan'];
+  for (let i = 0; i < count; i++) {
+    const t = types[Math.floor(Math.random() * types.length)];
+    enemies.push(spawnEnemy(t));
+  }
+}
+
+function showBossAnnounce(name, sub) {
+  const el = document.getElementById('boss-announce');
+  document.getElementById('boss-name').textContent = name;
+  document.getElementById('boss-sub').textContent = sub;
+  el.style.display = 'flex';
+  setTimeout(() => { el.style.display = 'none'; }, 2800);
+}
+
+function startGame() {
+  document.getElementById('title-screen').style.display = 'none';
+  gameState = 'playing';
+  player.hp = 100; player.rage = 0; player.combo = 0;
+  wave = 1;
+  spawnWave(1);
+  document.getElementById('wave-info').textContent = 'WAVE ' + wave;
+  loop();
+}
+
+function showMessage(txt, duration) {
+  const m = document.getElementById('msg');
+  m.textContent = txt;
+  m.style.opacity = '1';
+  clearTimeout(m._t);
+  m._t = setTimeout(() => { m.style.opacity = '0'; }, duration || 2000);
+}
+
+function updateHUD() {
+  document.getElementById('hp-bar').style.width = (player.hp / player.maxHp * 100) + '%';
+  document.getElementById('rage-bar').style.width = (player.rage / player.maxRage * 100) + '%';
+  const target = enemies[0];
+  if (target) {
+    document.getElementById('enemy-label').textContent = target.name.toUpperCase();
+    document.getElementById('enemy-hp-bar').style.width = (target.hp / target.maxHp * 100) + '%';
+    const isRed = target.size === 'boss';
+    document.getElementById('enemy-hp-bar').style.background = isRed ? 'linear-gradient(90deg,#8b0000,#dd3333)' : 'linear-gradient(90deg,#3a8b3a,#6f6)';
+  }
+  Object.keys(cooldowns).forEach(k => {
+    const btn = document.getElementById('sb-' + k);
+    if (!btn) return;
+    const cd = cooldowns[k];
+    let cdEl = btn.querySelector('.skill-cd');
+    if (cd > 0) {
+      btn.classList.add('on-cooldown');
+      if (!cdEl) { cdEl = document.createElement('div'); cdEl.className = 'skill-cd'; btn.appendChild(cdEl); }
+      cdEl.textContent = Math.ceil(cd / 60) + 's';
+    } else {
+      btn.classList.remove('on-cooldown');
+      if (cdEl) cdEl.remove();
+    }
+  });
+  document.getElementById('wave-info').textContent = 'WAVE ' + wave;
+}
+
+function showCombo() {
+  const el = document.getElementById('combo-text');
+  const cnt = document.getElementById('combo-count');
+  if (player.combo >= 5) {
+    el.style.opacity = '1';
+    const labels = ['', '', '', '', 'MORTAL BLOW', 'BRUTAL', 'SAVAGE', 'GODSLAYER', 'LEGENDARY', 'SPARTAN RAGE'];
+    el.textContent = labels[Math.min(player.combo, 9)] || 'SPARTAN FURY';
+    cnt.textContent = player.combo + 'x COMBO';
+    setTimeout(() => { el.style.opacity = '0'; cnt.textContent = ''; }, 800);
+  }
+}
+
+function addParticle(x, y, vx, vy, color, life, size) {
+  particles.push({ x, y, vx, vy, color, life, maxLife: life, size: size || 3 });
+}
+
+function addFloater(x, y, txt, color) {
+  floaters.push({ x, y, txt, color: color || '#f90', life: 60, vy: -1.5 });
+}
+
+function addSlash(x, y, angle, color, size) {
+  slashEffects.push({ x, y, angle, color, size: size || 60, life: 12, maxLife: 12 });
+}
+
+function doAction(action) {
+  if (gameState !== 'playing') return;
+  if (action === 'attack') {
+    if (player.isAttacking || player.isDodging) return;
+    player.isAttacking = true;
+    player.attackAnim = 18;
+    const nearest = getNearestEnemy();
+    if (nearest && dist(player, nearest) < 110) {
+      const dmg = player.rageMode ? 20 + Math.floor(Math.random() * 15) : 12 + Math.floor(Math.random() * 8);
+      hitEnemy(nearest, dmg);
+      player.combo++;
+      player.comboTimer = 90;
+      player.rage = Math.min(player.maxRage, player.rage + 8);
+      showCombo();
+      screenShake = 4;
+      addSlash(nearest.x, nearest.y - nearest.height / 2, Math.random() * 1 - 0.5, player.rageMode ? '#ff6600' : '#e8c060');
+    }
+    setTimeout(() => { player.isAttacking = false; }, 300);
+  } else if (action === 'block') {
+    player.isBlocking = true;
+    setTimeout(() => { player.isBlocking = false; }, 600);
+    showMessage('BLOCKING...', 600);
+  } else if (action === 'dodge') {
+    if (player.isDodging) return;
+    player.isDodging = true;
+    player.invincible = 30;
+    player.vx = player.facing * 8;
+    player.vy = -2;
+    player.dodgeAnim = 20;
+    setTimeout(() => { player.isDodging = false; }, 400);
+  }
+}
+
+function useSkill(key) {
+  if (gameState !== 'playing') return;
+  if (cooldowns[key] > 0) return;
+  if (key === 'q') {
+    // Ground slam
+    cooldowns.q = maxCD.q;
+    screenShake = 8;
+    for (let e of enemies) {
+      if (dist(player, e) < 160) {
+        hitEnemy(e, 30 + Math.floor(Math.random() * 20));
+        e.stunTimer = 80;
+      }
+    }
+    for (let i = 0; i < 20; i++) {
+      const a = (Math.PI * 2 / 20) * i;
+      addParticle(player.x, player.y, Math.cos(a) * 4, Math.sin(a) * 4, '#c8a060', 30, 4);
+    }
+    flashAlpha = 0.3; flashColor = '#8b6020';
+    showMessage('GROUND SLAM!', 1000);
+  } else if (key === 'e') {
+    // Spin attack
+    cooldowns.e = maxCD.e;
+    for (let e of enemies) {
+      if (dist(player, e) < 200) {
+        hitEnemy(e, 22 + Math.floor(Math.random() * 12));
+      }
+    }
+    for (let i = 0; i < 8; i++) {
+      addSlash(player.x, player.y - 28, (Math.PI * 2 / 8) * i, '#e8c060', 80);
+    }
+    screenShake = 6;
+    showMessage('BLADE SPIN!', 1000);
+  } else if (key === 'r') {
+    // Spartan Rage
+    if (player.rage < 80) { showMessage('NOT ENOUGH RAGE', 1000); return; }
+    cooldowns.r = maxCD.r;
+    player.rageMode = true;
+    player.rageTimer = 300;
+    player.rage = 0;
+    flashAlpha = 0.5; flashColor = '#ff4400';
+    screenShake = 12;
+    showMessage('⚡ SPARTAN RAGE! ⚡', 2000);
+    for (let i = 0; i < 30; i++) {
+      addParticle(player.x, player.y, (Math.random()-0.5)*6, (Math.random()-0.5)*6, '#ff6600', 40, 5);
+    }
+  } else if (key === 'f') {
+    // Rune attack — ranged
+    cooldowns.f = maxCD.f;
+    const nearest = getNearestEnemy();
+    if (nearest) {
+      hitEnemy(nearest, 45 + Math.floor(Math.random() * 25));
+      for (let i = 0; i < 15; i++) addParticle(nearest.x, nearest.y - nearest.height/2, (Math.random()-0.5)*5, (Math.random()-0.5)*5, '#88aaff', 25, 4);
+      flashAlpha = 0.25; flashColor = '#2244aa';
+    }
+    showMessage('✦ RUNE STRIKE ✦', 1000);
+  }
+}
+
+function hitEnemy(e, dmg) {
+  if (e.hp <= 0) return;
+  e.hp -= dmg;
+  e.hurtAnim = 10;
+  addFloater(e.x, e.y - e.height - 10, '-' + dmg, e.size === 'boss' ? '#ff4444' : '#f90');
+  for (let i = 0; i < 8; i++) {
+    addParticle(e.x + (Math.random()-0.5)*20, e.y - e.height*0.5, (Math.random()-0.5)*5, (Math.random()-0.5)*5 - 1, '#cc3300', 20, 3);
+  }
+  if (e.hp <= 0) killEnemy(e);
+}
+
+function killEnemy(e) {
+  for (let i = 0; i < 20; i++) {
+    addParticle(e.x, e.y - e.height * 0.5, (Math.random()-0.5)*8, (Math.random()-0.5)*8 - 2, e.color, 40, 5);
+  }
+  addFloater(e.x, e.y - e.height - 20, '+' + e.xp + ' XP', '#88ff88');
+  if (e.size === 'boss') {
+    screenShake = 20;
+    flashAlpha = 0.6; flashColor = '#ffcc00';
+    showMessage('⚡ DIVINE VICTORY! ⚡', 3000);
+    player.hp = Math.min(player.maxHp, player.hp + 40);
+    setTimeout(() => { nextWave(); }, 2000);
+  }
+}
+
+function nextWave() {
+  wave++;
+  if (wave > 6) {
+    showMessage('ALL GODS DEFEATED — SPARTA REIGNS!', 5000);
+    gameState = 'win';
+    return;
+  }
+  spawnWave(wave);
+}
+
+function getNearestEnemy() {
+  let best = null, bd = 9999;
+  for (const e of enemies) {
+    if (e.hp <= 0) continue;
+    const d = dist(player, e);
+    if (d < bd) { bd = d; best = e; }
+  }
+  return best;
+}
+
+function dist(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+const GROUND_Y = H * 0.75;
+const ARENA_LEFT = 60, ARENA_RIGHT = W - 60;
+
+function updatePlayer(dt) {
+  // Movement
+  let mx = 0, my = 0;
+  if (keys['arrowleft'] || keys['arrowup'] === false && keys['a'] !== undefined && false) mx -= 1;
+  if ((keys['arrowleft'])) mx -= 1;
+  if ((keys['arrowright'])) mx += 1;
+  if ((keys['arrowup'])) my -= 1;
+  if ((keys['arrowdown'])) my += 1;
+
+  const speed = player.rageMode ? 3.5 : 2.8;
+  if (mx !== 0) player.facing = mx > 0 ? 1 : -1;
+  player.vx = mx * speed;
+  player.vy += my * speed * 0.5;
+  player.vy *= 0.85;
+  player.vx *= player.isDodging ? 0.9 : 0.75;
+
+  player.x += player.vx;
+  player.y += player.vy;
+  player.x = Math.max(ARENA_LEFT + player.width / 2, Math.min(ARENA_RIGHT - player.width / 2, player.x));
+  player.y = Math.max(H * 0.15, Math.min(GROUND_Y, player.y));
+
+  if (player.attackAnim > 0) player.attackAnim--;
+  if (player.dodgeAnim > 0) player.dodgeAnim--;
+  if (player.hurtAnim > 0) player.hurtAnim--;
+  if (player.invincible > 0) player.invincible--;
+  if (player.comboTimer > 0) { player.comboTimer--; } else { player.combo = 0; }
+
+  if (player.rageMode) {
+    player.rageTimer--;
+    if (player.rageTimer <= 0) { player.rageMode = false; }
+    if (Math.random() < 0.3) addParticle(player.x + (Math.random()-0.5)*20, player.y - Math.random()*player.height, (Math.random()-0.5)*2, -Math.random()*2, '#ff6600', 20, 3);
+  }
+
+  Object.keys(cooldowns).forEach(k => { if (cooldowns[k] > 0) cooldowns[k]--; });
+}
+
+function updateEnemies(dt) {
+  const living = enemies.filter(e => e.hp > 0);
+  for (const e of living) {
+    if (e.stunTimer > 0) { e.stunTimer--; continue; }
+
+    const dx = player.x - e.x;
+    const dy = (player.y - 20) - (e.y - e.height / 2);
+    const d = Math.hypot(dx, dy);
+
+    const chaseSpeed = e.speed * (e.phase === 2 ? 1.4 : 1);
+
+    if (d > 70) {
+      e.vx = (dx / d) * chaseSpeed;
+      e.vy = (dy / d) * chaseSpeed * 0.6;
+    } else {
+      e.vx *= 0.7;
+      e.vy *= 0.7;
+    }
+
+    // Boss phase 2
+    if ((e.size === 'boss') && e.hp < e.maxHp * 0.4 && e.phase === 1) {
+      e.phase = 2;
+      flashAlpha = 0.4; flashColor = '#880000';
+      showMessage('⚡ PHASE 2: GOD UNLEASHED ⚡', 2000);
+      screenShake = 15;
+    }
+
+    e.x += e.vx;
+    e.y += e.vy;
+    e.x = Math.max(ARENA_LEFT + e.width/2, Math.min(ARENA_RIGHT - e.width/2, e.x));
+    e.y = Math.max(H * 0.2, Math.min(GROUND_Y, e.y));
+
+    if (e.hurtAnim > 0) e.hurtAnim--;
+    if (e.attackAnim > 0) e.attackAnim--;
+
+    // Attack player
+    e.attackTimer--;
+    if (e.attackTimer <= 0 && d < 80) {
+      e.attackTimer = 50 + Math.random() * 60;
+      e.attackAnim = 12;
+      if (player.invincible <= 0) {
+        if (player.isBlocking) {
+          const blocked = Math.floor(e.atk * 0.15);
+          player.hp -= blocked;
+          addFloater(player.x, player.y - 80, '-' + blocked + ' (BLOCKED)', '#88aaff');
+          player.rage = Math.min(player.maxRage, player.rage + 12);
+          screenShake = 3;
+          for (let i = 0; i < 6; i++) addParticle(player.x, player.y - player.height*0.5, (Math.random()-0.5)*4, -Math.random()*3, '#4488ff', 15, 4);
+        } else {
+          player.hp -= e.atk;
+          player.hurtAnim = 15;
+          addFloater(player.x, player.y - 80, '-' + e.atk, '#ff4444');
+          screenShake = 6;
+          for (let i = 0; i < 10; i++) addParticle(player.x, player.y - player.height*0.5, (Math.random()-0.5)*5, -Math.random()*4, '#cc1100', 20, 3);
+          if (player.hp <= 0) { player.hp = 0; gameState = 'dead'; }
+        }
+      }
+    }
+
+    // Boss special: area attack at phase 2
+    if (e.phase === 2 && Math.random() < 0.004) {
+      for (let i = 0; i < 12; i++) {
+        addParticle(e.x, e.y - e.height/2, (Math.random()-0.5)*10, (Math.random()-0.5)*10, e.size === 'boss' ? '#ff2200' : '#2244ff', 35, 5);
+      }
+      if (player.invincible <= 0 && !player.isBlocking && Math.random() < 0.4) {
+        const dmg = Math.floor(e.atk * 0.5);
+        player.hp -= dmg;
+        addFloater(player.x, player.y - 90, '-' + dmg + ' DIVINE', '#ff8800');
+        if (player.hp <= 0) { player.hp = 0; gameState = 'dead'; }
+      }
+    }
+  }
+
+  // Remove dead enemies from array (keep boss for dramatic lingering)
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    if (enemies[i].hp <= 0 && enemies[i].size !== 'boss') enemies.splice(i, 1);
+    else if (enemies[i].hp <= 0 && enemies[i].size === 'boss' && enemies[i].hurtAnim === 0) {
+      if (!enemies[i]._dying) {
+        enemies[i]._dying = true;
+        enemies[i]._dyingTimer = 80;
+      }
+      enemies[i]._dyingTimer--;
+      if (enemies[i]._dyingTimer <= 0) enemies.splice(i, 1);
+    }
+  }
+
+  if (enemies.filter(e => e.hp > 0).length === 0 && !bossWave && waveTimer <= 0) {
+    waveTimer = 120;
+  }
+
+  if (waveTimer > 0) {
+    waveTimer--;
+    if (waveTimer === 0) nextWave();
+  }
+}
+
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy;
+    p.vy += 0.1;
+    p.life--;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+  for (let i = floaters.length - 1; i >= 0; i--) {
+    const f = floaters[i];
+    f.y += f.vy; f.life--;
+    if (f.life <= 0) floaters.splice(i, 1);
+  }
+  for (let i = slashEffects.length - 1; i >= 0; i--) {
+    slashEffects[i].life--;
+    if (slashEffects[i].life <= 0) slashEffects.splice(i, 1);
+  }
+}
+
+function drawBackground() {
+  bgScroll += 0.3;
+  // Sky gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#0d0806');
+  grad.addColorStop(0.5, '#1a0c06');
+  grad.addColorStop(1, '#251208');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars
+  ctx.fillStyle = 'rgba(200,180,140,0.4)';
+  for (let i = 0; i < 60; i++) {
+    const sx = ((i * 137 + bgScroll * 0.1) % W);
+    const sy = (i * 83) % (H * 0.6);
+    ctx.fillRect(sx, sy, 1, 1);
+  }
+
+  // Background ruins
+  ctx.fillStyle = 'rgba(30,15,5,0.8)';
+  for (let i = 0; i < 5; i++) {
+    const bx = (i * 180 + 60 - bgScroll * 0.2) % (W + 100) - 50;
+    const bh = 80 + i * 30;
+    ctx.fillRect(bx, H * 0.45 - bh, 40, bh);
+    ctx.fillRect(bx - 5, H * 0.45 - bh - 10, 50, 12);
+  }
+
+  // Ground
+  const groundGrad = ctx.createLinearGradient(0, GROUND_Y - 20, 0, H);
+  groundGrad.addColorStop(0, '#1a0e06');
+  groundGrad.addColorStop(0.3, '#120a04');
+  groundGrad.addColorStop(1, '#080402');
+  ctx.fillStyle = groundGrad;
+  ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+
+  // Ground line
+  ctx.strokeStyle = '#3a2010';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, GROUND_Y);
+  ctx.lineTo(W, GROUND_Y);
+  ctx.stroke();
+
+  // Arena boundary
+  ctx.strokeStyle = 'rgba(80,40,10,0.4)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(ARENA_LEFT, H * 0.12, ARENA_RIGHT - ARENA_LEFT, GROUND_Y - H * 0.12);
+}
+
+function drawPlayer() {
+  const p = player;
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  if (p.hurtAnim > 0) ctx.translate((Math.random() - 0.5) * 4, 0);
+
+  const sx = p.facing === -1 ? -1 : 1;
+  ctx.scale(sx, 1);
+
+  const rage = p.rageMode;
+  const bodyColor = rage ? '#cc3300' : '#4a3020';
+  const armorColor = rage ? '#882200' : '#6a5030';
+  const skinColor = rage ? '#d06030' : '#c09060';
+  const glowAlpha = rage ? 0.5 + Math.sin(Date.now() * 0.01) * 0.3 : 0;
+
+  if (rage) {
+    ctx.shadowColor = '#ff4400';
+    ctx.shadowBlur = 20;
+  }
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  ctx.ellipse(0, 4, 18, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Legs
+  const legOff = Math.sin(Date.now() * 0.008) * (p.isDodging ? 6 : 3);
+  ctx.fillStyle = armorColor;
+  ctx.fillRect(-13, -20, 11, 22);
+  ctx.fillRect(2, -20 + legOff, 11, 22);
+
+  // Body / cuirass
+  ctx.fillStyle = bodyColor;
+  ctx.fillRect(-14, -46, 28, 28);
+
+  // Armor plates
+  ctx.fillStyle = armorColor;
+  ctx.fillRect(-14, -46, 28, 6);
+  ctx.fillRect(-14, -30, 28, 5);
+
+  // Chaos blades chain visual
+  ctx.strokeStyle = '#8b6030';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(-10, -35);
+  ctx.lineTo(-22, -28);
+  ctx.stroke();
+
+  // Attack swing
+  if (p.attackAnim > 0) {
+    const prog = p.attackAnim / 18;
+    ctx.save();
+    ctx.rotate(-1.2 + prog * 2.5);
+    ctx.strokeStyle = rage ? '#ff8800' : '#c8a050';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, -20);
+    ctx.lineTo(55, -30);
+    ctx.stroke();
+    // Blade
+    ctx.fillStyle = rage ? '#ff6600' : '#d4b060';
+    ctx.beginPath();
+    ctx.moveTo(38, -35);
+    ctx.lineTo(60, -25);
+    ctx.lineTo(38, -15);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Shield arm
+  if (p.isBlocking) {
+    ctx.fillStyle = '#3a5a8a';
+    ctx.fillRect(-24, -44, 12, 28);
+    ctx.strokeStyle = '#6a9aca';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(-24, -44, 12, 28);
+  }
+
+  // Head
+  ctx.fillStyle = skinColor;
+  ctx.beginPath();
+  ctx.ellipse(0, -52, 10, 11, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // War paint / Ares mark
+  ctx.strokeStyle = '#cc2200';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-7, -54); ctx.lineTo(-2, -50); ctx.lineTo(-7, -46);
+  ctx.stroke();
+
+  // Dodge trail
+  if (p.dodgeAnim > 0) {
+    ctx.fillStyle = 'rgba(200,160,80,0.15)';
+    ctx.fillRect(-p.width / 2 - 20 * p.facing, -p.height, p.width + 10, p.height);
+  }
+
+  ctx.restore();
+}
+
+function drawEnemy(e) {
+  if (e._dying && e._dyingTimer !== undefined) {
+    const alpha = e._dyingTimer / 80;
+    ctx.globalAlpha = alpha;
+  }
+  ctx.save();
+  ctx.translate(e.x, e.y);
+  if (e.hurtAnim > 0) ctx.translate((Math.random() - 0.5) * 5, 0);
+
+  const isPhase2 = e.phase === 2;
+  const t = e.type;
+  const glowColor = t === 'boss_ares' ? '#ff2200' : t === 'boss_zeus' ? '#2244ff' : null;
+
+  if (glowColor && isPhase2) {
+    ctx.shadowColor = glowColor;
+    ctx.shadowBlur = 25;
+  } else if (e.size === 'boss') {
+    ctx.shadowColor = glowColor;
+    ctx.shadowBlur = 10;
+  }
+
+  const facing = player.x < e.x ? -1 : 1;
+  ctx.scale(facing, 1);
+
+  const c = isPhase2 ? (t === 'boss_zeus' ? '#0a1a66' : '#660a0a') : e.color;
+  const bright = isPhase2 ? (t === 'boss_zeus' ? '#4488ff' : '#ff4400') : e.color;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(0, 4, e.width * 0.5, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Legs
+  ctx.fillStyle = c;
+  ctx.fillRect(-e.width * 0.4, -e.height * 0.4, e.width * 0.35, e.height * 0.4);
+  ctx.fillRect(e.width * 0.05, -e.height * 0.4, e.width * 0.35, e.height * 0.4);
+
+  // Body
+  ctx.fillStyle = c;
+  ctx.fillRect(-e.width * 0.5, -e.height * 0.85, e.width, e.height * 0.47);
+
+  // Armor detail
+  ctx.fillStyle = bright;
+  ctx.fillRect(-e.width * 0.5, -e.height * 0.85, e.width, 5);
+
+  // Weapon arm attack
+  if (e.attackAnim > 0) {
+    const prog = e.attackAnim / 12;
+    ctx.save();
+    ctx.rotate(0.8 - prog * 1.6);
+    ctx.strokeStyle = '#8a7030';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(e.width * 0.3, -e.height * 0.5);
+    ctx.lineTo(e.width * 0.8, -e.height * 0.7);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Head
+  ctx.fillStyle = isPhase2 ? bright : e.color;
+  const headSize = e.size === 'boss' ? 16 : e.size === 'large' ? 13 : 10;
+  ctx.beginPath();
+  ctx.ellipse(0, -e.height * 0.9, headSize, headSize * 1.1, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Boss specific: horns / lightning crown
+  if (e.size === 'boss') {
+    ctx.fillStyle = isPhase2 ? bright : '#c8a060';
+    if (t === 'boss_ares') {
+      // Horns
+      ctx.beginPath();
+      ctx.moveTo(-10, -e.height * 0.95);
+      ctx.lineTo(-18, -e.height - 15);
+      ctx.lineTo(-5, -e.height * 0.98);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(10, -e.height * 0.95);
+      ctx.lineTo(18, -e.height - 15);
+      ctx.lineTo(5, -e.height * 0.98);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      // Zeus lightning bolts
+      ctx.strokeStyle = isPhase2 ? '#88ccff' : '#aaccff';
+      ctx.lineWidth = 2;
+      for (let i = -1; i <= 1; i += 1) {
+        ctx.beginPath();
+        ctx.moveTo(i * 8, -e.height * 0.96);
+        ctx.lineTo(i * 5, -e.height - 10);
+        ctx.lineTo(i * 10, -e.height - 20);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // HP bar above enemy
+  const bw = e.width + 10;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(-bw / 2, -e.height - 14, bw, 6);
+  const hpPct = e.hp / e.maxHp;
+  ctx.fillStyle = hpPct > 0.5 ? '#3a9a3a' : hpPct > 0.25 ? '#aa8800' : '#cc2200';
+  ctx.fillRect(-bw / 2, -e.height - 14, bw * hpPct, 6);
+
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    const alpha = p.life / p.maxLife;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  for (const f of floaters) {
+    const alpha = f.life / 60;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = f.color;
+    ctx.font = 'bold 13px Georgia';
+    ctx.textAlign = 'center';
+    ctx.fillText(f.txt, f.x, f.y);
+  }
+  ctx.globalAlpha = 1;
+  ctx.textAlign = 'left';
+
+  for (const s of slashEffects) {
+    const alpha = s.life / s.maxLife;
+    ctx.globalAlpha = alpha * 0.8;
+    ctx.save();
+    ctx.translate(s.x, s.y);
+    ctx.rotate(s.angle);
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-s.size / 2, 0);
+    ctx.lineTo(s.size / 2, 0);
+    ctx.stroke();
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawScreenEffects() {
+  if (flashAlpha > 0) {
+    ctx.fillStyle = flashColor;
+    ctx.globalAlpha = flashAlpha;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+    flashAlpha -= 0.04;
+    if (flashAlpha < 0) flashAlpha = 0;
+  }
+  if (player.rageMode) {
+    ctx.fillStyle = '#ff2200';
+    ctx.globalAlpha = 0.04 + Math.sin(Date.now() * 0.005) * 0.02;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawOverlay() {
+  if (gameState === 'dead') {
+    ctx.fillStyle = 'rgba(0,0,0,0.75)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#cc2200';
+    ctx.font = 'bold 52px Georgia';
+    ctx.textAlign = 'center';
+    ctx.fillText('YOU HAVE FALLEN', W / 2, H / 2 - 30);
+    ctx.fillStyle = '#8a6040';
+    ctx.font = '18px Georgia';
+    ctx.fillText('THE GODS CLAIM VICTORY THIS DAY', W / 2, H / 2 + 20);
+    ctx.fillStyle = '#c8a060';
+    ctx.font = '14px Georgia';
+    ctx.fillText('REFRESH TO TRY AGAIN', W / 2, H / 2 + 55);
+    ctx.textAlign = 'left';
+  }
+  if (gameState === 'win') {
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#f0c040';
+    ctx.font = 'bold 44px Georgia';
+    ctx.textAlign = 'center';
+    ctx.fillText('SPARTA TRIUMPHANT', W / 2, H / 2 - 30);
+    ctx.fillStyle = '#8a9040';
+    ctx.font = '18px Georgia';
+    ctx.fillText('ALL GODS BOW TO THE GHOST OF SPARTA', W / 2, H / 2 + 20);
+    ctx.textAlign = 'left';
+  }
+}
+
+function loop() {
+  animFrame = requestAnimationFrame(loop);
+
+  // Screen shake
+  let sx = 0, sy = 0;
+  if (screenShake > 0) {
+    sx = (Math.random() - 0.5) * screenShake;
+    sy = (Math.random() - 0.5) * screenShake;
+    screenShake *= 0.85;
+    if (screenShake < 0.3) screenShake = 0;
+  }
+
+  ctx.save();
+  ctx.translate(sx, sy);
+
+  drawBackground();
+  if (gameState === 'playing' || gameState === 'dead' || gameState === 'win') {
+    updatePlayer();
+    updateEnemies();
+    updateParticles();
+    // Draw enemies behind player if player is higher
+    const sortedEnemies = [...enemies].sort((a, b) => a.y - b.y);
+    for (const e of sortedEnemies) drawEnemy(e);
+    drawPlayer();
+    drawParticles();
+    drawScreenEffects();
+    updateHUD();
+  }
+  drawOverlay();
+  ctx.restore();
+}
+
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+</script>
+</body>
+</html>

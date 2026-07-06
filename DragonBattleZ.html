@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dragon Battle Z</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; overflow: hidden; font-family: 'Arial Black', Impact, sans-serif; }
+  canvas { display: block; }
+  #ui {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 10;
+  }
+  #hud {
+    position: fixed; top: 0; left: 0; width: 100%; padding: 18px 32px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    z-index: 20; pointer-events: none;
+  }
+  .fighter-hud { width: 42%; }
+  .fighter-hud.right { text-align: right; }
+  .fighter-name {
+    font-size: 13px; letter-spacing: 3px; text-transform: uppercase;
+    color: #ffffff; text-shadow: 0 0 10px currentColor; margin-bottom: 5px;
+    font-weight: 900;
+  }
+  .hp-track {
+    width: 100%; height: 14px; background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 2px; overflow: hidden;
+    position: relative;
+  }
+  .hp-bar {
+    height: 100%; border-radius: 2px;
+    transition: width 0.1s ease;
+    position: relative;
+  }
+  .hp-bar::after {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.35) 0%, transparent 60%);
+  }
+  .p1 .hp-bar { background: linear-gradient(90deg, #00c8ff, #00ffaa); }
+  .p2 .hp-bar { background: linear-gradient(90deg, #ff4466, #ffcc00); float: right; }
+  .ki-track {
+    width: 100%; height: 7px; background: rgba(0,0,0,0.5);
+    border-radius: 2px; margin-top: 5px; overflow: hidden;
+    border: 1px solid rgba(255,200,0,0.2);
+  }
+  .ki-bar { height: 100%; background: linear-gradient(90deg, #ffaa00, #ffff44); border-radius: 2px; transition: width 0.15s ease; }
+  .p2 .ki-bar { float: right; background: linear-gradient(90deg, #ff44ff, #aa00ff); }
+  .ult-ready {
+    font-size: 10px; letter-spacing: 2px; margin-top: 4px;
+    color: #ffcc00; opacity: 0; transition: opacity 0.3s;
+    text-shadow: 0 0 8px #ffcc00;
+  }
+  .ult-ready.visible { opacity: 1; }
+  #round-banner {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    z-index: 50; text-align: center; pointer-events: none; opacity: 0;
+  }
+  #round-banner .round-text {
+    font-size: clamp(48px, 10vw, 96px); font-weight: 900;
+    letter-spacing: 6px; text-transform: uppercase;
+    color: #fff; text-shadow: 0 0 40px #ffcc00, 0 0 80px #ffaa00, 4px 4px 0 #ff2244;
+    display: block;
+  }
+  #controls-info {
+    position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 28px; z-index: 20; pointer-events: none;
+  }
+  .ctrl-group { text-align: center; }
+  .ctrl-label { font-size: 9px; letter-spacing: 2px; color: rgba(255,255,255,0.4); text-transform: uppercase; margin-bottom: 3px; }
+  .ctrl-keys { font-size: 10px; color: rgba(255,255,255,0.65); }
+  .ctrl-keys kbd {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 3px; padding: 1px 5px; font-size: 9px; margin: 0 1px;
+  }
+  #screen-flash {
+    position: fixed; inset: 0; z-index: 100; pointer-events: none;
+    background: white; opacity: 0;
+  }
+  #winner-screen {
+    position: fixed; inset: 0; z-index: 200; display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.95) 100%);
+  }
+  #winner-screen .winner-label { font-size: 15px; letter-spacing: 6px; color: #ffcc00; margin-bottom: 10px; }
+  #winner-screen .winner-name { font-size: clamp(52px,11vw,110px); font-weight: 900; letter-spacing: 4px; color: #fff; text-shadow: 0 0 60px #ffcc00; }
+  #winner-screen .restart-btn {
+    margin-top: 30px; padding: 14px 48px; font-size: 14px; letter-spacing: 4px;
+    text-transform: uppercase; background: transparent; border: 1px solid #ffcc00;
+    color: #ffcc00; cursor: pointer; pointer-events: all;
+    transition: all 0.2s;
+  }
+  #winner-screen .restart-btn:hover { background: #ffcc00; color: #000; }
+  #score-display {
+    position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+    z-index: 25; display: flex; gap: 16px; align-items: center; padding-top: 20px;
+    pointer-events: none;
+  }
+  .score-pip { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); }
+  .score-pip.p1-win { background: #00c8ff; box-shadow: 0 0 8px #00c8ff; }
+  .score-pip.p2-win { background: #ff4466; box-shadow: 0 0 8px #ff4466; }
+  #timer-display {
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+    font-size: 22px; font-weight: 900; color: #fff; z-index: 30;
+    letter-spacing: 2px; text-shadow: 0 0 10px rgba(255,255,255,0.5);
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud">
+  <div class="fighter-hud p1">
+    <div class="fighter-name" id="p1name">SON GOKU</div>
+    <div class="hp-track"><div class="hp-bar" id="p1hp" style="width:100%"></div></div>
+    <div class="ki-track"><div class="ki-bar" id="p1ki" style="width:0%"></div></div>
+    <div class="ult-ready" id="p1ult">★ ULTIMATE READY</div>
+  </div>
+  <div style="width:16%"></div>
+  <div class="fighter-hud p2 right">
+    <div class="fighter-name" id="p2name">VEGETA</div>
+    <div class="hp-track"><div class="hp-bar" id="p2hp" style="width:100%"></div></div>
+    <div class="ki-track"><div class="ki-bar" id="p2ki" style="width:0%"></div></div>
+    <div class="ult-ready" id="p2ult">★ ULTIMATE READY</div>
+  </div>
+</div>
+
+<div id="timer-display">99</div>
+
+<div id="score-display">
+  <div class="score-pip" id="sp1a"></div>
+  <div class="score-pip" id="sp1b"></div>
+  <div style="width:1px;height:20px;background:rgba(255,255,255,0.2)"></div>
+  <div class="score-pip" id="sp2a"></div>
+  <div class="score-pip" id="sp2b"></div>
+</div>
+
+<div id="round-banner"><span class="round-text" id="banner-text">ROUND 1</span></div>
+<div id="screen-flash"></div>
+
+<div id="winner-screen">
+  <div class="winner-label">WINNER</div>
+  <div class="winner-name" id="winner-name">GOKU</div>
+  <button class="restart-btn" onclick="restartGame()">PLAY AGAIN</button>
+</div>
+
+<div id="controls-info">
+  <div class="ctrl-group">
+    <div class="ctrl-label">P1 Move</div>
+    <div class="ctrl-keys"><kbd>A</kbd><kbd>D</kbd></div>
+  </div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">P1 Jump</div>
+    <div class="ctrl-keys"><kbd>W</kbd></div>
+  </div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">P1 Punch</div>
+    <div class="ctrl-keys"><kbd>F</kbd></div>
+  </div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">P1 Ki Blast</div>
+    <div class="ctrl-keys"><kbd>G</kbd></div>
+  </div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">P1 Ultimate</div>
+    <div class="ctrl-keys"><kbd>H</kbd></div>
+  </div>
+  <div style="width:1px;background:rgba(255,255,255,0.15)"></div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">P2 Move</div>
+    <div class="ctrl-keys"><kbd>←</kbd><kbd>→</kbd></div>
+  </div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">P2 Jump</div>
+    <div class="ctrl-keys"><kbd>↑</kbd></div>
+  </div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">P2 Punch</div>
+    <div class="ctrl-keys"><kbd>K</kbd></div>
+  </div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">P2 Ki Blast</div>
+    <div class="ctrl-keys"><kbd>L</kbd></div>
+  </div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">P2 Ultimate</div>
+    <div class="ctrl-keys"><kbd>;</kbd></div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, GROUND;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  GROUND = H * 0.78;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ─── Audio ────────────────────────────────────────────────────────────────
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+
+function playTone(freq, type, dur, vol=0.3, detune=0) {
+  const g = AC.createGain(); g.gain.setValueAtTime(vol, AC.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + dur);
+  const o = AC.createOscillator(); o.type = type; o.frequency.value = freq;
+  o.detune.value = detune;
+  o.connect(g); g.connect(AC.destination);
+  o.start(); o.stop(AC.currentTime + dur);
+}
+
+function playPunch() {
+  playTone(80, 'sawtooth', 0.12, 0.5);
+  playTone(200, 'square', 0.08, 0.3, 50);
+}
+function playBlast() {
+  const g = AC.createGain(); g.gain.setValueAtTime(0.4, AC.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + 0.4);
+  const o = AC.createOscillator(); o.type = 'sawtooth';
+  o.frequency.setValueAtTime(600, AC.currentTime);
+  o.frequency.exponentialRampToValueAtTime(150, AC.currentTime + 0.4);
+  o.connect(g); g.connect(AC.destination);
+  o.start(); o.stop(AC.currentTime + 0.4);
+}
+function playUltimate() {
+  [200,400,600,800,1200].forEach((f,i) => {
+    setTimeout(() => playTone(f, 'sawtooth', 0.3, 0.4), i * 60);
+  });
+  setTimeout(() => { playTone(80,'square',1.2,0.6); playTone(40,'sawtooth',1.5,0.4); }, 300);
+}
+function playHit() { playTone(150,'square',0.1,0.4); }
+function playLand() { playTone(60,'sawtooth',0.15,0.3); }
+function playCharge() {
+  for(let i=0;i<8;i++) setTimeout(()=>playTone(300+i*80,'sine',0.08,0.15),i*30);
+}
+
+// ─── Particles ────────────────────────────────────────────────────────────
+const particles = [];
+
+function spawnParticles(x,y,color,count=18,speed=6,size=4,life=40) {
+  for(let i=0;i<count;i++) {
+    const a = Math.random()*Math.PI*2;
+    const s = (0.3+Math.random()*0.7)*speed;
+    particles.push({ x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s - Math.random()*2,
+      color, size: size*(0.5+Math.random()*0.7), life, maxLife: life,
+      glow: Math.random() > 0.5 });
+  }
+}
+
+function spawnImpactRing(x,y,color) {
+  for(let i=0;i<3;i++) {
+    particles.push({ x, y, vx:0, vy:0, color, size:0, maxSize:80+i*40,
+      life:25, maxLife:25, type:'ring', ring:true });
+  }
+}
+
+function updateParticles() {
+  for(let i=particles.length-1;i>=0;i--) {
+    const p = particles[i];
+    p.life--;
+    if(p.life<=0) { particles.splice(i,1); continue; }
+    if(p.ring) { p.size = p.maxSize*(1-p.life/p.maxLife); continue; }
+    p.x += p.vx; p.y += p.vy; p.vy += 0.15; p.vx *= 0.96;
+  }
+}
+
+function drawParticles() {
+  particles.forEach(p => {
+    const alpha = p.life/p.maxLife;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    if(p.ring) {
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = 3*(p.life/p.maxLife);
+      ctx.shadowBlur = 15; ctx.shadowColor = p.color;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,Math.PI*2); ctx.stroke();
+    } else {
+      if(p.glow) { ctx.shadowBlur=12; ctx.shadowColor=p.color; }
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.size*alpha,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  });
+}
+
+// ─── Ki Blasts ────────────────────────────────────────────────────────────
+const blasts = [];
+
+function fireBlast(owner, x, y, dir, isUlt=false) {
+  playBlast();
+  if(isUlt) playUltimate();
+  blasts.push({
+    owner, x, y, vx: dir*(isUlt?18:11), vy:0,
+    r: isUlt?32:14, isUlt,
+    color: owner===0 ? (isUlt?'#00ffff':'#00c8ff') : (isUlt?'#ff66ff':'#ff2244'),
+    glowColor: owner===0 ? '#00a8ff' : '#ff0044',
+    life: isUlt?90:60
+  });
+  if(isUlt) {
+    screenShake(20, 400);
+    flashScreen(0.6, 120);
+    spawnParticles(x, y, owner===0?'#00c8ff':'#ff2244', 40, 10, 8, 50);
+  }
+}
+
+function updateBlasts() {
+  for(let i=blasts.length-1;i>=0;i--) {
+    const b = blasts[i];
+    b.x += b.vx; b.life--;
+    // trail
+    spawnParticles(b.x, b.y, b.color, b.isUlt?4:1, 1.5, b.isUlt?6:3, 20);
+    if(b.life<=0 || b.x<-100 || b.x>W+100) { blasts.splice(i,1); continue; }
+    // hit detection
+    const target = b.owner===0 ? fighters[1] : fighters[0];
+    const dx = b.x - target.x, dy = b.y - (target.y - target.h/2);
+    if(Math.hypot(dx,dy) < b.r + 30) {
+      const dmg = b.isUlt ? 28 : 10;
+      hitFighter(b.owner===0?1:0, dmg, b.color);
+      spawnParticles(b.x, b.y, b.color, 30, 8, 6, 50);
+      spawnImpactRing(b.x, b.y, b.color);
+      screenShake(b.isUlt?18:8, b.isUlt?350:150);
+      if(b.isUlt) flashScreen(0.8, 200);
+      blasts.splice(i,1);
+    }
+  }
+}
+
+function drawBlasts() {
+  blasts.forEach(b => {
+    ctx.save();
+    // outer glow
+    const grad = ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r*2.5);
+    grad.addColorStop(0, b.color);
+    grad.addColorStop(0.4, b.glowColor);
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.shadowBlur = b.isUlt?60:30; ctx.shadowColor = b.color;
+    ctx.beginPath(); ctx.arc(b.x,b.y,b.r*2.5,0,Math.PI*2); ctx.fill();
+    // core
+    ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.arc(b.x,b.y,b.r*0.4,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+}
+
+// ─── Screen Effects ────────────────────────────────────────────────────────
+let shakeX=0, shakeY=0, shakeTimer=0, shakePow=0;
+let flashAlpha=0;
+
+function screenShake(power, duration) {
+  shakePow = Math.max(shakePow, power);
+  shakeTimer = Math.max(shakeTimer, duration);
+}
+function flashScreen(alpha, duration) {
+  flashAlpha = Math.max(flashAlpha, alpha);
+  const el = document.getElementById('screen-flash');
+  el.style.opacity = flashAlpha;
+  el.style.transition = 'none';
+  setTimeout(()=>{ el.style.transition=`opacity ${duration}ms ease`; el.style.opacity=0; flashAlpha=0; }, 30);
+}
+
+function updateShake() {
+  if(shakeTimer>0) {
+    shakeTimer -= 16;
+    const t = Math.min(shakeTimer/200,1);
+    shakeX = (Math.random()-0.5)*shakePow*t;
+    shakeY = (Math.random()-0.5)*shakePow*t;
+    if(shakeTimer<=0) { shakeX=0;shakeY=0;shakePow=0; }
+  }
+}
+
+// ─── Hit Effect ───────────────────────────────────────────────────────────
+const hitTexts = [];
+function showHitText(x,y,text,color='#ffcc00') {
+  hitTexts.push({x, y: y-40, text, color, life:50, vy:-1.5});
+}
+
+function updateHitTexts() {
+  for(let i=hitTexts.length-1;i>=0;i--) {
+    const h=hitTexts[i]; h.life--; h.y+=h.vy; h.vy*=0.95;
+    if(h.life<=0) hitTexts.splice(i,1);
+  }
+}
+function drawHitTexts() {
+  hitTexts.forEach(h=>{
+    ctx.save();
+    ctx.globalAlpha = h.life/50;
+    ctx.font = `bold ${20+Math.min((50-h.life)*0.5,14)}px 'Arial Black', Impact`;
+    ctx.fillStyle = h.color;
+    ctx.shadowBlur=15; ctx.shadowColor=h.color;
+    ctx.textAlign='center';
+    ctx.fillText(h.text, h.x, h.y);
+    ctx.restore();
+  });
+}
+
+// ─── Fighter ──────────────────────────────────────────────────────────────
+class Fighter {
+  constructor(x, dir, name, colors, config) {
+    this.x = x; this.y = GROUND; this.vx=0; this.vy=0;
+    this.dir = dir; this.name = name; this.colors = colors;
+    this.w = 56; this.h = 90;
+    this.hp = 100; this.maxHp = 100;
+    this.ki = 0; this.maxKi = 100;
+    this.onGround = true;
+    this.state = 'idle'; // idle, run, jump, punch, blast, hurt, ultimate, knockback
+    this.stateTimer = 0;
+    this.punchCombo = 0;
+    this.punchTimer = 0;
+    this.invuln = 0;
+    this.auraPulse = 0;
+    this.jumpCount = 0;
+    this.facing = dir > 0 ? 1 : -1; // 1=right, -1=left
+    this.config = config; // p1 or p2
+    // animation
+    this.limbAngle = 0;
+    this.squash = 1; this.squashTimer = 0;
+    this.auraFrames = 0;
+    this.ultCharging = false;
+  }
+
+  get ultReady() { return this.ki >= 100; }
+
+  jump() {
+    if(this.jumpCount < 2 && this.state!=='hurt' && this.state!=='ultimate') {
+      this.vy = -20; this.onGround = false; this.jumpCount++;
+      this.state='jump'; this.stateTimer=20;
+      this.squash = 0.7; this.squashTimer = 8;
+      spawnParticles(this.x, this.y, this.colors.aura, 8, 4, 3, 20);
+    }
+  }
+
+  punch(other) {
+    if(this.state==='hurt'||this.state==='ultimate') return;
+    if(this.punchTimer>0) return;
+    this.state='punch'; this.stateTimer=20;
+    this.punchCombo = (this.punchCombo+1)%4;
+    this.punchTimer = 16;
+    const dist = Math.abs(this.x - other.x);
+    if(dist < 95) {
+      const comboDmg = [8,8,10,20];
+      const comboNames = ['HIT!','HIT!!','SMASH!','COMBO!!'];
+      hitFighter(this.config===0?1:0, comboDmg[this.punchCombo], this.colors.primary);
+      showHitText(other.x, other.y-other.h, comboNames[this.punchCombo], this.colors.primary);
+      this.ki = Math.min(100, this.ki+8);
+      playPunch();
+      spawnParticles(other.x, other.y-other.h*0.6, '#fff', 12, 6, 4, 25);
+      spawnImpactRing(other.x, other.y-other.h*0.6, this.colors.primary);
+      screenShake(this.punchCombo===3?14:7, this.punchCombo===3?250:100);
+      if(this.punchCombo===3) flashScreen(0.3,100);
+    }
+  }
+
+  blast(other) {
+    if(this.state==='hurt'||this.state==='ultimate') return;
+    if(this.ki<20) { playCharge(); this.ki=Math.min(100,this.ki+15); return; }
+    this.ki -= 20;
+    this.state='blast'; this.stateTimer=18;
+    const bx = this.x + this.dir*40;
+    fireBlast(this.config, bx, this.y - this.h*0.55, this.dir);
+  }
+
+  ultimate(other) {
+    if(!this.ultReady||this.state==='ultimate'||this.state==='hurt') return;
+    this.ki=0;
+    this.state='ultimate'; this.stateTimer=90;
+    this.ultCharging = true;
+    screenShake(15, 500);
+    flashScreen(0.5,150);
+    // charge up then fire
+    setTimeout(()=>{
+      if(!this) return;
+      this.ultCharging = false;
+      const bx = this.x + this.dir*60;
+      fireBlast(this.config, bx, this.y - this.h*0.55, this.dir, true);
+      spawnParticles(this.x, this.y-this.h/2, this.colors.aura, 60, 12, 8, 70);
+    }, 800);
+  }
+
+  update(other, keys) {
+    // Input
+    if(this.state!=='hurt' && this.state!=='ultimate') {
+      const left = keys[this.config===0?'a':'ArrowLeft'];
+      const right = keys[this.config===0?'d':'ArrowRight'];
+      if(left) { this.vx=-5.5; if(this.onGround) this.state='run'; this.facing=-1; this.dir=-1; }
+      else if(right) { this.vx=5.5; if(this.onGround) this.state='run'; this.facing=1; this.dir=1; }
+      else { this.vx*=0.8; if(this.onGround&&this.state!=='punch'&&this.state!=='blast') this.state='idle'; }
+    } else { this.vx*=0.85; }
+
+    // Auto-face opponent
+    if(this.state==='idle'||this.state==='run') {
+      this.dir = other.x > this.x ? 1 : -1;
+      this.facing = this.dir;
+    }
+
+    // Physics
+    this.vy += 0.9;
+    this.x += this.vx; this.y += this.vy;
+    if(this.y>=GROUND) { this.y=GROUND; this.vy=0; this.onGround=true; this.jumpCount=0; if(this.vy>3) {spawnParticles(this.x,this.y,this.colors.aura,6,3,2,15); playLand();} }
+    else this.onGround=false;
+    // Bounds
+    this.x=Math.max(this.w*0.5+20, Math.min(W-this.w*0.5-20, this.x));
+
+    // Timers
+    if(this.stateTimer>0) { this.stateTimer--; if(this.stateTimer===0 && (this.state==='punch'||this.state==='blast'||this.state==='hurt'||this.state==='ultimate')) this.state='idle'; }
+    if(this.punchTimer>0) this.punchTimer--;
+    if(this.invuln>0) this.invuln--;
+    // Animation
+    this.limbAngle = this.state==='run' ? Math.sin(Date.now()*0.02)*0.5 : (this.state==='idle' ? Math.sin(Date.now()*0.006)*0.07 : 0);
+    if(this.squashTimer>0) { this.squashTimer--; this.squash+=(1-this.squash)*0.2; }
+    this.auraPulse = Math.sin(Date.now()*0.008)*0.4+0.6;
+    // Passive ki regen
+    if(this.state!=='hurt') this.ki=Math.min(100,this.ki+0.02);
+  }
+
+  draw() {
+    ctx.save();
+    ctx.translate(this.x+shakeX, this.y+shakeY);
+    ctx.scale(this.facing, 1);
+
+    const sy = this.squash;
+    const sx = 2-this.squash;
+
+    // Aura
+    if(this.state==='ultimate'||this.ultReady) {
+      const ap = this.auraPulse*(this.ultReady?1.5:1);
+      const aGrad = ctx.createRadialGradient(0,-this.h*0.4*sy,0,0,-this.h*0.4*sy,80*ap);
+      aGrad.addColorStop(0, this.colors.aura+'88');
+      aGrad.addColorStop(0.5, this.colors.aura+'33');
+      aGrad.addColorStop(1,'transparent');
+      ctx.fillStyle=aGrad;
+      ctx.beginPath(); ctx.ellipse(0,-this.h*0.4*sy,50*ap,80*ap,0,0,Math.PI*2); ctx.fill();
+      // Lightning sparks
+      if(Math.random()>0.6) {
+        const sx2=(Math.random()-0.5)*60, sy2=(Math.random()-0.5)*100-this.h*0.4;
+        spawnParticles(this.x+(this.facing*sx2), this.y+sy2, this.colors.aura, 2, 3, 1.5, 15);
+      }
+    }
+
+    // Hair glow for SSJ feeling
+    if(this.state==='ultimate') {
+      ctx.shadowBlur=30; ctx.shadowColor=this.colors.aura;
+    }
+
+    // Body
+    ctx.save();
+    ctx.scale(sx, sy);
+
+    // Legs
+    const la = this.limbAngle;
+    // Left leg
+    ctx.save(); ctx.translate(-12, -this.h*0.15);
+    ctx.rotate(la);
+    ctx.fillStyle=this.colors.pants;
+    ctx.beginPath(); ctx.roundRect(-9,0,18,this.h*0.45,4); ctx.fill();
+    // Boot
+    ctx.fillStyle=this.colors.boots||'#222';
+    ctx.beginPath(); ctx.roundRect(-10,this.h*0.4,20,this.h*0.12,3); ctx.fill();
+    ctx.restore();
+    // Right leg
+    ctx.save(); ctx.translate(12, -this.h*0.15);
+    ctx.rotate(-la);
+    ctx.fillStyle=this.colors.pants;
+    ctx.beginPath(); ctx.roundRect(-9,0,18,this.h*0.45,4); ctx.fill();
+    ctx.fillStyle=this.colors.boots||'#222';
+    ctx.beginPath(); ctx.roundRect(-10,this.h*0.4,20,this.h*0.12,3); ctx.fill();
+    ctx.restore();
+
+    // Torso
+    ctx.fillStyle=this.colors.gi;
+    ctx.beginPath(); ctx.roundRect(-20,-this.h*0.6,40,this.h*0.45,6); ctx.fill();
+
+    // Belt / sash
+    ctx.fillStyle=this.colors.belt||'#fff';
+    ctx.fillRect(-20,-this.h*0.16,40,9);
+
+    // Arms
+    const punchLift = this.state==='punch'?-0.5:0;
+    // Left arm
+    ctx.save(); ctx.translate(-24,-this.h*0.5);
+    ctx.rotate(-la+punchLift);
+    ctx.fillStyle=this.colors.gi;
+    ctx.beginPath(); ctx.roundRect(-8,0,16,this.h*0.35,4); ctx.fill();
+    // Glove/fist
+    ctx.fillStyle=this.colors.skin||'#e8b87a';
+    ctx.beginPath(); ctx.arc(0,this.h*0.35,8,0,Math.PI*2); ctx.fill();
+    if(this.state==='punch') {
+      ctx.shadowBlur=20; ctx.shadowColor=this.colors.primary;
+      ctx.strokeStyle=this.colors.primary; ctx.lineWidth=2;
+      ctx.stroke();
+    }
+    ctx.restore();
+    // Right arm (punch arm)
+    ctx.save(); ctx.translate(24,-this.h*0.5);
+    ctx.rotate(la-punchLift);
+    ctx.fillStyle=this.colors.gi;
+    ctx.beginPath(); ctx.roundRect(-8,0,16,this.h*0.35,4); ctx.fill();
+    ctx.fillStyle=this.colors.skin||'#e8b87a';
+    ctx.beginPath(); ctx.arc(0,this.h*0.35,8,0,Math.PI*2); ctx.fill();
+    if(this.state==='punch') {
+      ctx.shadowBlur=20; ctx.shadowColor=this.colors.primary;
+      ctx.strokeStyle=this.colors.primary; ctx.lineWidth=2;
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Head
+    ctx.fillStyle=this.colors.skin||'#e8b87a';
+    ctx.beginPath(); ctx.ellipse(0,-this.h*0.72,18,20,0,0,Math.PI*2); ctx.fill();
+    // Eyes
+    const eyeColor = this.state==='ultimate'?'#0ff':'#111';
+    ctx.fillStyle=eyeColor;
+    if(this.state==='ultimate') { ctx.shadowBlur=10; ctx.shadowColor='#0ff'; }
+    ctx.beginPath(); ctx.ellipse(6,-this.h*0.72,4,3,0,0,Math.PI*2); ctx.fill();
+    // Eyebrow
+    ctx.strokeStyle='#555'; ctx.lineWidth=2; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(2,-this.h*0.76); ctx.lineTo(10,-this.h*0.78); ctx.stroke();
+    // Hair
+    ctx.fillStyle=this.colors.hair||'#111';
+    if(this.state==='ultimate') { ctx.fillStyle='#ffee00'; ctx.shadowBlur=20; ctx.shadowColor='#ffcc00'; }
+    // Spiky hair
+    ctx.beginPath();
+    ctx.moveTo(-14,-this.h*0.78);
+    [[-8,-18],[-4,-28],[2,-32],[8,-26],[14,-20],[16,-12],[12,-10]].forEach(([dx,dy])=>
+      ctx.lineTo(dx,dy-this.h*0.6));
+    ctx.closePath(); ctx.fill();
+
+    ctx.restore(); // undo squash
+    ctx.restore(); // undo translate+facing
+
+    // Hurt flash
+    if(this.invuln>0 && Math.floor(this.invuln/3)%2===0) {
+      ctx.save();
+      ctx.globalAlpha=0.5;
+      ctx.translate(this.x+shakeX, this.y+shakeY);
+      ctx.fillStyle='#fff';
+      ctx.beginPath(); ctx.ellipse(0,-this.h*0.45,30,this.h*0.55,0,0,Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+}
+
+// ─── Game State ────────────────────────────────────────────────────────────
+const CHARS = [
+  {
+    name: 'SON GOKU',
+    colors: {
+      gi:'#ff8800', pants:'#1a1a2e', belt:'#fff',
+      boots:'#1a1a2e', hair:'#1a1a1a', skin:'#f0c080',
+      primary:'#00c8ff', aura:'#00aaff', gi2:'#ff6600'
+    }
+  },
+  {
+    name: 'VEGETA',
+    colors: {
+      gi:'#ffffff', pants:'#1a1a2e', belt:'#888',
+      boots:'#1a1a2e', hair:'#111', skin:'#f0c080',
+      primary:'#cc44ff', aura:'#aa00ff', gi2:'#dddddd'
+    }
+  }
+];
+
+let fighters = [];
+let keys = {};
+let gameState = 'fight'; // fight, roundEnd, gameOver
+let round = 1;
+let scores = [0,0];
+let roundTimer = 99;
+let roundTimerFrac = 0;
+let roundBannerTimeout = null;
+
+function initFighters() {
+  fighters = [
+    new Fighter(W*0.3, 1, CHARS[0].name, CHARS[0].colors, 0),
+    new Fighter(W*0.7, -1, CHARS[1].name, CHARS[1].colors, 1)
+  ];
+}
+
+function hitFighter(idx, dmg, color) {
+  const f = fighters[idx];
+  if(f.invuln>0) return;
+  f.hp = Math.max(0, f.hp-dmg);
+  f.invuln = 22;
+  f.state='hurt'; f.stateTimer=16;
+  f.vy=-8; f.vx = idx===0?6:-6;
+  f.squash=1.3; f.squashTimer=8;
+  playHit();
+  updateHUD();
+  if(f.hp<=0) endRound();
+}
+
+function updateHUD() {
+  document.getElementById('p1hp').style.width=fighters[0].hp+'%';
+  document.getElementById('p2hp').style.width=fighters[1].hp+'%';
+  document.getElementById('p1ki').style.width=fighters[0].ki+'%';
+  document.getElementById('p2ki').style.width=fighters[1].ki+'%';
+  document.getElementById('p1ult').classList.toggle('visible', fighters[0].ultReady);
+  document.getElementById('p2ult').classList.toggle('visible', fighters[1].ultReady);
+}
+
+function showBanner(text, duration=1600) {
+  const banner = document.getElementById('round-banner');
+  document.getElementById('banner-text').textContent = text;
+  banner.style.opacity='0'; banner.style.transition='none';
+  requestAnimationFrame(()=>{
+    banner.style.transition='opacity 0.18s ease';
+    banner.style.opacity='1';
+    clearTimeout(roundBannerTimeout);
+    roundBannerTimeout = setTimeout(()=>{
+      banner.style.transition='opacity 0.5s ease'; banner.style.opacity='0';
+    }, duration);
+  });
+}
+
+function endRound() {
+  if(gameState!=='fight') return;
+  gameState='roundEnd';
+  const winner = fighters[0].hp <= 0 ? 1 : 0;
+  scores[winner]++;
+  updateScorePips();
+  if(scores[winner]>=2) {
+    // Game over
+    setTimeout(()=>showWinner(winner), 800);
+  } else {
+    round++;
+    const rname = ['ROUND 1','ROUND 2','ROUND 3'][round-1]||'SUDDEN DEATH';
+    showBanner(winner===0?'GOKU WINS!':'VEGETA WINS!');
+    setTimeout(()=>startRound(rname), 2200);
+  }
+}
+
+function updateScorePips() {
+  const ids = [['sp1a','sp1b'],['sp2a','sp2b']];
+  const cls = ['p1-win','p2-win'];
+  ids.forEach((pair,pi)=>{
+    pair.forEach((id,i)=>{
+      const el=document.getElementById(id);
+      el.classList.remove('p1-win','p2-win');
+      if(i<scores[pi]) el.classList.add(cls[pi]);
+    });
+  });
+}
+
+function showWinner(idx) {
+  const ws = document.getElementById('winner-screen');
+  document.getElementById('winner-name').textContent = CHARS[idx].name;
+  ws.style.display='flex';
+  flashScreen(0.9,300);
+  screenShake(25,600);
+}
+
+function startRound(label='ROUND 1') {
+  gameState='fight';
+  blasts.length=0; particles.length=0; hitTexts.length=0;
+  roundTimer=99; roundTimerFrac=0;
+  resize();
+  initFighters();
+  updateHUD();
+  showBanner(label, 1200);
+  setTimeout(()=>showBanner('FIGHT!',800),1500);
+}
+
+function restartGame() {
+  document.getElementById('winner-screen').style.display='none';
+  scores=[0,0]; round=1;
+  updateScorePips();
+  startRound('ROUND 1');
+}
+
+// ─── Background ────────────────────────────────────────────────────────────
+let bgStars=[];
+function initStars() {
+  bgStars=[];
+  for(let i=0;i<200;i++) bgStars.push({x:Math.random()*3000,y:Math.random()*H*0.85,r:Math.random()*1.5+0.2,blink:Math.random()*Math.PI*2});
+}
+initStars();
+
+let cloudOffset=0;
+function drawBG() {
+  // Sky gradient
+  const sky = ctx.createLinearGradient(0,0,0,H*0.8);
+  sky.addColorStop(0,'#050510');
+  sky.addColorStop(0.4,'#0a0520');
+  sky.addColorStop(0.8,'#150830');
+  sky.addColorStop(1,'#0d0420');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,H);
+
+  // Stars
+  bgStars.forEach(s=>{
+    s.blink+=0.015;
+    const a=0.4+Math.sin(s.blink)*0.3;
+    ctx.save(); ctx.globalAlpha=a; ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.arc((s.x+shakeX*0.2)%W,s.y+shakeY*0.2,s.r,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+
+  // Distant planet
+  ctx.save();
+  const pg=ctx.createRadialGradient(W*0.75,H*0.12,0,W*0.75,H*0.12,90);
+  pg.addColorStop(0,'#1a0a40'); pg.addColorStop(0.7,'#0d0520'); pg.addColorStop(1,'transparent');
+  ctx.fillStyle=pg; ctx.beginPath(); ctx.arc(W*0.75,H*0.12,90,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='rgba(80,40,160,0.3)'; ctx.lineWidth=1.5;
+  for(let i=0;i<3;i++) {
+    ctx.save(); ctx.translate(W*0.75,H*0.12); ctx.scale(1,0.28+i*0.05); ctx.rotate(0.1);
+    ctx.beginPath(); ctx.arc(0,0,110+i*22,0,Math.PI*2); ctx.stroke(); ctx.restore();
+  }
+  ctx.restore();
+
+  // Energy clouds
+  cloudOffset=(cloudOffset+0.2)%W;
+  for(let ci=0;ci<3;ci++) {
+    const cx=((W*0.15+ci*W*0.3+cloudOffset)%W);
+    const cy=H*0.2+ci*H*0.08;
+    const cg=ctx.createRadialGradient(cx,cy,0,cx,cy,180);
+    const cc=['rgba(0,80,180,0.08)','rgba(120,0,180,0.06)','rgba(0,120,160,0.07)'][ci];
+    cg.addColorStop(0,cc); cg.addColorStop(1,'transparent');
+    ctx.fillStyle=cg; ctx.beginPath(); ctx.ellipse(cx,cy,280,90,0,0,Math.PI*2); ctx.fill();
+  }
+
+  // Ground
+  const gx = ctx.createLinearGradient(0,GROUND,0,H);
+  gx.addColorStop(0,'#1a0e3a'); gx.addColorStop(0.3,'#0d0820'); gx.addColorStop(1,'#050312');
+  ctx.fillStyle=gx; ctx.fillRect(0,GROUND,W,H-GROUND);
+
+  // Ground line glow
+  ctx.save();
+  ctx.shadowBlur=30; ctx.shadowColor='rgba(80,30,200,0.6)';
+  ctx.strokeStyle='rgba(100,50,220,0.5)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(0,GROUND); ctx.lineTo(W,GROUND); ctx.stroke();
+  ctx.restore();
+
+  // Ground texture / reflection
+  const ref=ctx.createLinearGradient(0,GROUND,0,GROUND+80);
+  ref.addColorStop(0,'rgba(80,30,200,0.15)'); ref.addColorStop(1,'transparent');
+  ctx.fillStyle=ref; ctx.fillRect(0,GROUND,W,80);
+}
+
+// ─── Input ────────────────────────────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(!keys[e.key]) {
+    keys[e.key]=true;
+    if(gameState!=='fight') return;
+    const [f0,f1]=fighters;
+    if(e.key==='w') f0.jump();
+    if(e.key==='f') f0.punch(f1);
+    if(e.key==='g') f0.blast(f1);
+    if(e.key==='h') f0.ultimate(f1);
+    if(e.key==='ArrowUp') f1.jump();
+    if(e.key==='k') f1.punch(f0);
+    if(e.key==='l') f1.blast(f0);
+    if(e.key===';') f1.ultimate(f0);
+  }
+  e.preventDefault();
+});
+document.addEventListener('keyup',e=>{ delete keys[e.key]; });
+
+// ─── Timer ────────────────────────────────────────────────────────────────
+function updateTimer(dt) {
+  roundTimerFrac += dt;
+  if(roundTimerFrac >= 1000) {
+    roundTimerFrac -= 1000;
+    roundTimer--;
+    document.getElementById('timer-display').textContent=Math.max(0,roundTimer);
+    if(roundTimer<=0) {
+      // Time over — higher HP wins
+      if(gameState==='fight') {
+        if(fighters[0].hp > fighters[1].hp) fighters[1].hp=0;
+        else fighters[0].hp=0;
+        endRound();
+      }
+    }
+  }
+}
+
+// ─── Main Loop ────────────────────────────────────────────────────────────
+let lastTime=0;
+function loop(ts) {
+  const dt = ts-lastTime; lastTime=ts;
+  ctx.clearRect(0,0,W,H);
+
+  updateShake();
+  drawBG();
+
+  if(gameState==='fight') {
+    fighters[0].update(fighters[1], keys);
+    fighters[1].update(fighters[0], keys);
+    updateBlasts();
+    updateTimer(dt);
+    updateHUD();
+  }
+
+  updateParticles();
+  updateHitTexts();
+
+  drawParticles();
+  fighters.forEach(f=>f.draw());
+  drawBlasts();
+  drawHitTexts();
+
+  requestAnimationFrame(loop);
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────────────
+initFighters();
+updateHUD();
+showBanner('ROUND 1', 1200);
+setTimeout(()=>showBanner('FIGHT!',800),1600);
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

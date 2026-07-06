@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pro Skater</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: #06060f;
+    overflow: hidden;
+    font-family: 'Arial Black', 'Arial Bold', Gadget, sans-serif;
+  }
+
+  canvas { display: block; width: 100%; height: 100%; }
+
+  /* ── HUD overlay ── */
+  #ui {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+  }
+
+  #hud-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 10px 16px;
+  }
+
+  /* score */
+  #score-wrap { color: #fff; }
+  #score-lbl  { font-size: 10px; letter-spacing: 3px; color: #ff6b00; }
+  #score-val  { font-size: 42px; font-weight: 900; line-height: 1;
+                text-shadow: 0 0 20px #ff6b0099; }
+  #combo-pts  { font-size: 13px; color: #ffe000; min-height: 18px; margin-top: 2px; }
+
+  /* timer */
+  #timer-wrap { text-align: center; }
+  #timer-lbl  { font-size: 10px; letter-spacing: 3px; color: #ff6b00; }
+  #timer-val  { font-size: 38px; font-weight: 900; color: #fff; min-width: 64px;
+                text-align: center; }
+  #timer-val.urgent { color: #ff3333; animation: pulse .4s infinite alternate; }
+  @keyframes pulse { from { opacity: 1; } to { opacity: .35; } }
+
+  /* trick readout */
+  #right-wrap   { text-align: right; min-width: 180px; }
+  #trick-name   { font-size: 18px; font-weight: 900; color: #00e5ff;
+                  text-shadow: 0 0 14px #00e5ffaa; min-height: 26px; }
+  #combo-info   { font-size: 12px; color: #aaa; margin-top: 3px; min-height: 16px; }
+  #mult-info    { font-size: 12px; color: #ff6b00; margin-top: 2px; min-height: 16px; }
+
+  /* special bar */
+  #special-bar-wrap {
+    position: absolute; left: 16px; top: 82px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  #special-lbl   { font-size: 9px; letter-spacing: 2px; color: #ff6b00; }
+  #special-track { width: 130px; height: 7px; background: #1a1a2e;
+                   border: 1px solid #ff6b0055; border-radius: 4px; overflow: hidden; }
+  #special-fill  { height: 100%; width: 0%; background: #ff6b00;
+                   border-radius: 4px; transition: width .15s; }
+  #special-ready { font-size: 9px; color: #ffe000; letter-spacing: 1px; min-height: 13px; }
+
+  /* balance bar */
+  #balance-wrap {
+    position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+    display: none; flex-direction: column; align-items: center; gap: 4px;
+  }
+  #bal-lbl   { font-size: 9px; letter-spacing: 2px; color: #00e5ff; }
+  #bal-track { width: 140px; height: 7px; background: #1a1a2e; border-radius: 4px; overflow: hidden; }
+  #bal-fill  { height: 100%; background: #00e5ff; border-radius: 4px;
+               transition: width .05s, background .2s; }
+
+  /* controls hint */
+  #controls-bar {
+    position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+    font-size: 10px; color: #444; letter-spacing: 1.5px; white-space: nowrap;
+  }
+
+  /* big trick flash */
+  #trick-flash {
+    position: absolute; top: 46%; left: 50%; transform: translate(-50%, -50%);
+    pointer-events: none; text-align: center;
+  }
+  #trick-flash-text {
+    font-size: 30px; font-weight: 900; color: #ffe000;
+    text-shadow: 0 0 22px #ffe000aa; opacity: 0; transition: opacity .1s;
+  }
+
+  /* start / end screen */
+  #screen-overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(6, 6, 15, .93);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 16px;
+    pointer-events: all;
+  }
+  #screen-overlay.hidden { display: none; }
+
+  #overlay-title {
+    font-size: 40px; font-weight: 900; color: #ff6b00;
+    letter-spacing: 4px; text-shadow: 0 0 28px #ff6b00aa;
+  }
+  #overlay-sub {
+    font-size: 14px; color: #aaa; text-align: center;
+    max-width: 360px; line-height: 1.7;
+  }
+  #overlay-scores {
+    font-size: 13px; color: #fff; text-align: center; line-height: 2;
+  }
+  #overlay-scores span { color: #ffe000; }
+
+  #start-btn {
+    margin-top: 8px; padding: 13px 36px;
+    background: #ff6b00; color: #fff; border: none;
+    border-radius: 6px; font-size: 15px; font-weight: 900;
+    letter-spacing: 2px; cursor: pointer; pointer-events: all;
+    transition: background .15s;
+  }
+  #start-btn:hover { background: #ff8c33; }
+
+  #controls-hint-overlay {
+    font-size: 11px; color: #555; letter-spacing: 1px;
+    text-align: center; line-height: 1.9; max-width: 460px;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<!-- HUD -->
+<div id="ui">
+  <div id="hud-top">
+    <!-- score -->
+    <div id="score-wrap">
+      <div id="score-lbl">SCORE</div>
+      <div id="score-val">0</div>
+      <div id="combo-pts"></div>
+    </div>
+
+    <!-- timer -->
+    <div id="timer-wrap">
+      <div id="timer-lbl">TIME</div>
+      <div id="timer-val">2:00</div>
+    </div>
+
+    <!-- trick readout -->
+    <div id="right-wrap">
+      <div id="trick-name"></div>
+      <div id="combo-info"></div>
+      <div id="mult-info"></div>
+    </div>
+  </div>
+
+  <!-- special meter -->
+  <div id="special-bar-wrap">
+    <div id="special-lbl">SPECIAL</div>
+    <div id="special-track"><div id="special-fill"></div></div>
+    <div id="special-ready"></div>
+  </div>
+
+  <!-- manual balance bar -->
+  <div id="balance-wrap">
+    <div id="bal-lbl">BALANCE</div>
+    <div id="bal-track"><div id="bal-fill" style="width:50%"></div></div>
+  </div>
+
+  <!-- centre trick flash -->
+  <div id="trick-flash"><div id="trick-flash-text"></div></div>
+
+  <!-- controls reminder -->
+  <div id="controls-bar">
+    ← → Move &nbsp;|&nbsp; SPACE / ↑ Ollie &nbsp;|&nbsp;
+    Z Kickflip &nbsp;|&nbsp; X Heelflip &nbsp;|&nbsp;
+    C 360 Flip &nbsp;|&nbsp; V Hardflip &nbsp;|&nbsp;
+    S Manual &nbsp;|&nbsp; Q Special &nbsp;|&nbsp; Grind rails &amp; Wallride!
+  </div>
+</div>
+
+<!-- Start / End Screen -->
+<div id="screen-overlay">
+  <div id="overlay-title">PRO SKATER</div>
+  <div id="overlay-sub">2 minutes. Every trick counts.<br>Chain combos for massive multipliers.</div>
+  <div id="overlay-scores"></div>
+  <div id="controls-hint-overlay">
+    ← → &nbsp;Move &nbsp;|&nbsp; SPACE / ↑ Ollie &nbsp;|&nbsp; Z Kickflip &nbsp;|&nbsp; X Heelflip<br>
+    C 360 Flip &nbsp;|&nbsp; V Hardflip &nbsp;|&nbsp; S Manual &nbsp;|&nbsp; Q Special (fill meter first)<br>
+    Ride into walls in the air → Wallride bonus!
+  </div>
+  <button id="start-btn">DROP IN</button>
+</div>
+
+<script>
+/* ─────────────────────────────────────────────
+   CANVAS SETUP
+───────────────────────────────────────────── */
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+let W, H, GROUND, CAM_X = 0;
+
+function resize() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  GROUND = H - 70;
+}
+resize();
+window.addEventListener('resize', () => { resize(); buildLevel(); });
+
+/* ─────────────────────────────────────────────
+   CONSTANTS / TRICK TABLES
+───────────────────────────────────────────── */
+const LEVEL_W = 3400;
+
+const TRICK_DEFS = {
+  z: ['Kickflip',   300, { flip:  1, spin: 0 }],
+  x: ['Heelflip',   300, { flip: -1, spin: 0 }],
+  c: ['360 Flip',   600, { flip:  1, spin: 1 }],
+  v: ['Hardflip',   500, { flip: -1, spin:.5 }],
+};
+
+const SPECIAL_TRICKS  = ['720', 1800, 'McTwist', 2000, '900', 2500, 'Indy 900', 2200];
+const GRIND_NAMES     = ['Nosegrind','5-0 Grind','Boardslide','Bluntslide','Crooked Grind','Noseblunt'];
+const MANUAL_NAMES    = ['Nose Manual','Manual','Casper Manual'];
+
+/* ─────────────────────────────────────────────
+   GAME STATE
+───────────────────────────────────────────── */
+let score       = 0;
+let comboScore  = 0;
+let multiplier  = 1;
+let combo       = 0;
+let specialMeter = 0;
+let specialReady = false;
+let gameRunning  = false;
+let timeLeft     = 120;
+let timerInterval = null;
+let highScores   = [];
+let trickFlashTimer = 0;
+let lastTrick    = '';
+
+/* skater object */
+const sk = {
+  x: 300, y: 200, vx: 4.5, vy: 0,
+  w: 20,  h: 32,
+  onGround: false, onRail: false, onWall: false, onManual: false,
+  facing: 1,
+  spinning: false, spinAngle: 0, spinDir: 1,
+  flipping: false, flipAngle: 0, flipDir:  1,
+  grindTimer: 0,  grindTrick: '',
+  manualTimer: 0, manualTrick: '',
+  balanceVal: 0.5, balanceDrift: 0,
+  jumpHeld: false,
+  airTricks: [],
+};
+
+/* effect pools */
+const particles  = [];
+const floatTexts = [];
+
+/* level geometry */
+const RAMPS = [];
+const RAILS = [];
+const WALLS = [];
+
+/* ─────────────────────────────────────────────
+   LEVEL BUILDER
+───────────────────────────────────────────── */
+function buildLevel() {
+  RAMPS.length = 0;
+  RAILS.length = 0;
+  WALLS.length = 0;
+
+  const g  = GROUND;
+  const rh = Math.min(H * 0.38, 185);
+
+  /* quarter-pipes  dir:1 = rises left→right, dir:-1 = rises right→left */
+  RAMPS.push({ x:    0, y: g, w: 230, h: rh, dir:  1 });
+  RAMPS.push({ x:  530, y: g, w: 230, h: rh, dir: -1 });
+  RAMPS.push({ x:  860, y: g, w: 230, h: rh, dir:  1 });
+  RAMPS.push({ x: 1360, y: g, w: 230, h: rh, dir: -1 });
+  RAMPS.push({ x: 1690, y: g, w: 230, h: rh, dir:  1 });
+  RAMPS.push({ x: 2190, y: g, w: 230, h: rh, dir: -1 });
+  RAMPS.push({ x: 2520, y: g, w: 230, h: rh, dir:  1 });
+  RAMPS.push({ x: 3020, y: g, w: 230, h: rh, dir: -1 });
+
+  /* grind rails */
+  RAILS.push({ x:  360, y: g - 42, w: 210, h: 8 });
+  RAILS.push({ x: 1090, y: g - 40, w: 230, h: 8 });
+  RAILS.push({ x: 1930, y: g - 46, w: 210, h: 8 });
+  RAILS.push({ x: 2760, y: g - 42, w: 210, h: 8 });
+
+  /* wall-ride surfaces */
+  WALLS.push({ x:    0,         y: g - rh, w: 18, h: rh, side: 'left'  });
+  WALLS.push({ x:  762 - 18,   y: g - rh, w: 18, h: rh, side: 'right' });
+  WALLS.push({ x: 1592,        y: g - rh, w: 18, h: rh, side: 'left'  });
+  WALLS.push({ x: 2422 - 18,   y: g - rh, w: 18, h: rh, side: 'right' });
+  WALLS.push({ x: LEVEL_W - 18,y: g - rh, w: 18, h: rh, side: 'right' });
+
+  /* reset skater */
+  sk.x = 160; sk.y = g - rh - sk.h;
+  sk.vx = 4.5; sk.vy = 0;
+  sk.onGround = sk.onRail = sk.onWall = sk.onManual = false;
+  sk.spinning = sk.flipping = false;
+  sk.spinAngle = sk.flipAngle = 0;
+  sk.grindTimer = sk.manualTimer = 0;
+  sk.balanceVal = 0.5; sk.balanceDrift = 0;
+  sk.jumpHeld = false; sk.airTricks = [];
+}
+
+/* ─────────────────────────────────────────────
+   RAMP GEOMETRY HELPERS
+───────────────────────────────────────────── */
+function getRampY(ramp, wx) {
+  const rx = wx - ramp.x;
+  if (rx < 0 || rx > ramp.w) return null;
+  const t = rx / ramp.w;
+  return ramp.dir === 1
+    ? ramp.y - Math.sin(t * Math.PI / 2) * ramp.h
+    : ramp.y - Math.cos(t * Math.PI / 2) * ramp.h;
+}
+
+function getRampNorm(ramp, wx) {
+  const t = (wx - ramp.x) / ramp.w;
+  if (ramp.dir === 1) {
+    const a = t * Math.PI / 2;
+    return { nx: -Math.cos(a), ny: -Math.sin(a) };
+  } else {
+    const a = t * Math.PI / 2;
+    return { nx: Math.sin(a), ny: -Math.cos(a) };
+  }
+}
+
+/* ─────────────────────────────────────────────
+   PARTICLE / FLOAT-TEXT HELPERS
+───────────────────────────────────────────── */
+function spawnParticles(x, y, col, n, big) {
+  const COLS = ['#ff6b00','#00e5ff','#fff','#ffe000','#ff3366'];
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const s = big ? 3 + Math.random() * 6 : 1 + Math.random() * 3;
+    particles.push({
+      x, y,
+      vx: Math.cos(a) * s,
+      vy: Math.sin(a) * s - (big ? 3 : 0),
+      life: 1,
+      decay: .018 + Math.random() * .025,
+      size: big ? 3 + Math.random() * 4 : 1.5 + Math.random() * 2.5,
+      color: col || COLS[Math.floor(Math.random() * COLS.length)],
+    });
+  }
+}
+
+function spawnFloat(x, y, text, col) {
+  floatTexts.push({ x, y, text, col: col || '#ffe000', life: 1, vy: -1.3 });
+}
+
+/* ─────────────────────────────────────────────
+   INPUT
+───────────────────────────────────────────── */
+const keys = {};
+window.addEventListener('keydown', e => {
+  if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
+  keys[e.key]  = true;
+  keys[e.code] = true;
+  if (e.code === 'Space') keys['space'] = true;
+});
+window.addEventListener('keyup', e => {
+  keys[e.key]  = false;
+  keys[e.code] = false;
+  if (e.code === 'Space') keys['space'] = false;
+});
+
+/* ─────────────────────────────────────────────
+   TRICK / COMBO LOGIC
+───────────────────────────────────────────── */
+function doTrick(name, pts, isGrind, isManual) {
+  if (name === lastTrick && !isGrind && !isManual) return;
+  lastTrick = name;
+
+  const earned = pts * multiplier;
+  comboScore  += earned;
+  multiplier   = Math.min(multiplier + (isGrind || isManual ? 0.3 : 1), 20);
+  combo++;
+  specialMeter = Math.min(specialMeter + (isGrind ? .015 : .03), 1);
+
+  if (!isGrind && !isManual) sk.airTricks.push(name);
+
+  /* HUD */
+  document.getElementById('trick-name').textContent  = name;
+  document.getElementById('combo-info').textContent  = combo > 1 ? `×${combo} combo` : '';
+  document.getElementById('mult-info').textContent   = `×${(Math.floor(multiplier * 10) / 10)} multiplier`;
+  document.getElementById('special-fill').style.width = (specialMeter * 100) + '%';
+  specialReady = specialMeter >= 1;
+  document.getElementById('special-ready').textContent = specialReady ? 'SPECIAL READY! (Q)' : '';
+
+  if (!isGrind && !isManual) {
+    const ft = document.getElementById('trick-flash-text');
+    ft.textContent = name;
+    ft.style.opacity = '1';
+    trickFlashTimer = 44;
+  }
+
+  spawnParticles(sk.x + sk.w / 2, sk.y, null, 6);
+}
+
+function landCombo(crashed) {
+  if (comboScore > 0 && !crashed) {
+    score += comboScore;
+    spawnFloat(sk.x + sk.w / 2, sk.y, '+' + comboScore.toLocaleString(), '#ffe000');
+    spawnParticles(sk.x + sk.w / 2, sk.y + sk.h, '#ffe000', 24, true);
+  }
+  if (crashed && combo > 0) {
+    spawnFloat(sk.x + sk.w / 2, sk.y, 'BAILED!', '#ff3333');
+    spawnParticles(sk.x + sk.w / 2, sk.y + sk.h, '#ff3333', 16, true);
+  }
+
+  comboScore = 0; multiplier = 1; combo = 0; lastTrick = ''; sk.airTricks = [];
+
+  document.getElementById('combo-pts').textContent  = '';
+  document.getElementById('trick-name').textContent  = '';
+  document.getElementById('combo-info').textContent  = '';
+  document.getElementById('mult-info').textContent   = '';
+}
+
+/* ─────────────────────────────────────────────
+   UPDATE (called every frame)
+───────────────────────────────────────────── */
+function update() {
+  if (!gameRunning) return;
+
+  /* ── input aliases ── */
+  const goLeft   = keys['ArrowLeft']  || keys['KeyA'] || keys['a'];
+  const goRight  = keys['ArrowRight'] || keys['KeyD'] || keys['d'];
+  const jumpKey  = keys['space']      || keys['ArrowUp'] || keys['KeyW'] || keys['w'];
+  const manualKey= keys['ArrowDown']  || keys['KeyS'] || keys['s'];
+
+  /* ── gravity ── */
+  sk.vy += 0.45;
+
+  /* ── on-ground controls ── */
+  if (sk.onGround) {
+    if (goLeft  && !sk.onRail) sk.vx -= 0.36;
+    if (goRight && !sk.onRail) sk.vx += 0.36;
+
+    /* MANUAL */
+    if (manualKey && !sk.onRail && Math.abs(sk.vx) > 1.5) {
+      sk.onManual = true;
+      sk.manualTimer++;
+      if (sk.manualTimer === 1) {
+        sk.manualTrick = MANUAL_NAMES[Math.floor(Math.random() * MANUAL_NAMES.length)];
+        doTrick(sk.manualTrick, 200, false, true);
+      } else if (sk.manualTimer % 30 === 0) {
+        doTrick(sk.manualTrick, 100, false, true);
+      }
+
+      sk.balanceDrift += (Math.random() - .5) * .03;
+      sk.balanceVal    = Math.max(0, Math.min(1, sk.balanceVal + sk.balanceDrift));
+      if (goLeft)  sk.balanceVal = Math.max(0, sk.balanceVal - .015);
+      if (goRight) sk.balanceVal = Math.min(1, sk.balanceVal + .015);
+
+      document.getElementById('balance-wrap').style.display = 'flex';
+      const bv = sk.balanceVal;
+      document.getElementById('bal-fill').style.width      = (bv * 100) + '%';
+      document.getElementById('bal-fill').style.background  = (bv < .2 || bv > .8) ? '#ff3333' : '#00e5ff';
+
+      if (bv <= 0 || bv >= 1) {
+        landCombo(true);
+        sk.onManual = false; sk.manualTimer = 0;
+        document.getElementById('balance-wrap').style.display = 'none';
+      }
+    } else {
+      if (sk.onManual && sk.manualTimer > 0) {
+        sk.onManual = false; sk.manualTimer = 0;
+        sk.balanceVal = 0.5; sk.balanceDrift = 0;
+        document.getElementById('balance-wrap').style.display = 'none';
+        landCombo(false);
+      }
+    }
+
+    /* JUMP */
+    if (jumpKey && !sk.jumpHeld) {
+      const spd = Math.min(Math.abs(sk.vx) * .55 + 8, 15);
+      sk.vy = -spd;
+      sk.onGround = sk.onRail = sk.onManual = false;
+      sk.manualTimer = 0; sk.grindTimer = 0;
+      document.getElementById('balance-wrap').style.display = 'none';
+      sk.jumpHeld = true;
+      landCombo(false);
+      lastTrick = '';
+    }
+
+  } else {
+    /* ── in-air controls ── */
+    if (!jumpKey) sk.jumpHeld = false;
+    if (goLeft)  sk.vx -= .09;
+    if (goRight) sk.vx += .09;
+
+    /* spin / flip animations */
+    if (sk.spinning) sk.spinAngle += 9 * sk.spinDir;
+    if (sk.flipping) sk.flipAngle += 12 * sk.flipDir;
+
+    /* TRICK KEYS */
+    for (const [key, [name, pts, anim]] of Object.entries(TRICK_DEFS)) {
+      if (keys[key]) {
+        if (!sk.spinning && !sk.flipping) {
+          sk.spinning = !!anim.spin; sk.spinDir = sk.vx > 0 ? 1 : -1;
+          sk.flipping = !!anim.flip; sk.flipDir = anim.flip || 1;
+        }
+        doTrick(name, pts, false, false);
+      }
+    }
+
+    /* SPECIAL TRICK */
+    if (specialReady && (keys['q'] || keys['KeyQ'])) {
+      const si = Math.floor(Math.random() * (SPECIAL_TRICKS.length / 2)) * 2;
+      doTrick(SPECIAL_TRICKS[si], SPECIAL_TRICKS[si + 1], false, false);
+      specialMeter = 0; specialReady = false;
+      document.getElementById('special-fill').style.width = '0%';
+      document.getElementById('special-ready').textContent = '';
+      spawnParticles(sk.x + sk.w / 2, sk.y, '#ffe000', 32, true);
+    }
+  }
+
+  /* ── facing ── */
+  if (sk.vx > 0.2) sk.facing =  1;
+  if (sk.vx < -0.2) sk.facing = -1;
+
+  /* ── velocity cap + friction ── */
+  sk.vx = Math.max(-10, Math.min(10, sk.vx));
+  if (sk.onGround && !sk.onRail) sk.vx *= .993;
+  else sk.vx *= .9988;
+
+  /* ── integrate position ── */
+  sk.x += sk.vx;
+  sk.y += sk.vy;
+
+  /* ── level bounds ── */
+  if (sk.x < 0)             { sk.x = 0;           sk.vx =  Math.abs(sk.vx) * .5; }
+  if (sk.x + sk.w > LEVEL_W){ sk.x = LEVEL_W - sk.w; sk.vx = -Math.abs(sk.vx) * .5; }
+
+  const wasAir = !sk.onGround;
+  let onGround = false, onRailNow = false;
+
+  /* ── RAIL COLLISION ── */
+  for (const rail of RAILS) {
+    const sb = sk.y + sk.h;
+    if (
+      sk.x + sk.w > rail.x && sk.x < rail.x + rail.w &&
+      sb >= rail.y - 2 && sb <= rail.y + rail.h + 16 && sk.vy >= -.5
+    ) {
+      sk.y = rail.y - sk.h; sk.vy = 0;
+      onRailNow = true; onGround = true;
+      sk.grindTimer++;
+      if (sk.grindTimer === 1) {
+        sk.grindTrick = GRIND_NAMES[Math.floor(Math.random() * GRIND_NAMES.length)];
+        doTrick(sk.grindTrick, 200, true, false);
+      } else if (sk.grindTimer % 20 === 0) {
+        doTrick(sk.grindTrick, 80, true, false);
+        spawnParticles(sk.x + sk.w / 2, sk.y + sk.h, '#00e5ff', 5);
+      }
+      sk.onRail = true;
+    }
+  }
+  if (!onRailNow) { sk.onRail = false; if (sk.grindTimer > 0) sk.grindTimer = 0; }
+
+  /* ── RAMP COLLISION ── */
+  if (!onRailNow) {
+    for (const ramp of RAMPS) {
+      const mid = sk.x + sk.w / 2;
+      const ry  = getRampY(ramp, mid);
+      if (ry !== null && sk.y + sk.h >= ry - 2 && sk.y + sk.h <= ry + 30 && sk.vy >= 0) {
+        const norm = getRampNorm(ramp, mid);
+        sk.y = ry - sk.h;
+        const dot = sk.vx * norm.nx + sk.vy * norm.ny;
+        sk.vx -= dot * norm.nx * 1.65;
+        sk.vy -= dot * norm.ny * 1.65;
+        sk.vy *= .25;
+        if (ramp.dir ===  1 && norm.nx < -.3) sk.vx =  Math.abs(sk.vx);
+        if (ramp.dir === -1 && norm.nx >  .3) sk.vx = -Math.abs(sk.vx);
+        onGround = true;
+      }
+    }
+
+    /* ── WALL COLLISION ── */
+    for (const wall of WALLS) {
+      if (sk.y + sk.h > wall.y && sk.y < wall.y + wall.h) {
+        if (wall.side === 'left'  && sk.x <= wall.x + wall.w && sk.x + sk.w > wall.x && sk.vx < 0) {
+          sk.x = wall.x + wall.w; sk.vx = Math.abs(sk.vx) * .7;
+          if (!sk.onGround && Math.abs(sk.vy) < 9 && !sk.onWall) {
+            doTrick('Wallride', 400, false, false);
+            sk.onWall = true;
+            spawnParticles(sk.x, sk.y + sk.h / 2, '#ff6b00', 8);
+          }
+        }
+        if (wall.side === 'right' && sk.x + sk.w >= wall.x && sk.x < wall.x + wall.w && sk.vx > 0) {
+          sk.x = wall.x - sk.w; sk.vx = -Math.abs(sk.vx) * .7;
+          if (!sk.onGround && Math.abs(sk.vy) < 9 && !sk.onWall) {
+            doTrick('Wallride', 400, false, false);
+            sk.onWall = true;
+            spawnParticles(sk.x + sk.w, sk.y + sk.h / 2, '#ff6b00', 8);
+          }
+        }
+      }
+    }
+
+    /* ── FLAT GROUND ── */
+    if (sk.y + sk.h >= GROUND && sk.vy >= 0) {
+      sk.y = GROUND - sk.h; sk.vy = 0; onGround = true;
+    }
+  }
+
+  /* reset wall-ride flag on ground touch */
+  if (!sk.onGround && onGround) sk.onWall = false;
+  sk.onGround = onGround || onRailNow;
+
+  /* ── LANDING ── */
+  if (wasAir && sk.onGround && !onRailNow) {
+    sk.spinning = false; sk.flipping = false;
+    sk.spinAngle = 0; sk.flipAngle = 0;
+    if (combo > 0 || comboScore > 0) landCombo(false);
+  }
+
+  /* ── trick flash timer ── */
+  if (trickFlashTimer > 0) {
+    trickFlashTimer--;
+    if (trickFlashTimer === 0)
+      document.getElementById('trick-flash-text').style.opacity = '0';
+  }
+
+  /* ── update particles & floats ── */
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy; p.vy += .13;
+    p.life -= p.decay;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+  for (let i = floatTexts.length - 1; i >= 0; i--) {
+    const f = floatTexts[i];
+    f.y += f.vy; f.life -= .017;
+    if (f.life <= 0) floatTexts.splice(i, 1);
+  }
+
+  /* ── HUD score ── */
+  document.getElementById('score-val').textContent  = Math.floor(score + comboScore).toLocaleString();
+  document.getElementById('combo-pts').textContent  = comboScore > 0 ? '+ ' + comboScore.toLocaleString() + ' combo' : '';
+
+  /* ── camera ── */
+  CAM_X = sk.x - W * .33;
+  CAM_X = Math.max(0, Math.min(LEVEL_W - W, CAM_X));
+}
+
+/* ─────────────────────────────────────────────
+   DRAW HELPERS
+───────────────────────────────────────────── */
+function drawBg() {
+  ctx.fillStyle = '#06060f';
+  ctx.fillRect(0, 0, W, H);
+
+  /* grid lines */
+  ctx.strokeStyle = 'rgba(255,107,0,.028)';
+  ctx.lineWidth   = 1;
+  for (let x = 0; x < W; x += 64) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = 0; y < H; y += 64) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+  /* parallax stars */
+  ctx.fillStyle = 'rgba(255,255,255,.35)';
+  for (let i = 0; i < 60; i++) {
+    const sx = ((i * 137 + CAM_X * .14) % W + W) % W;
+    const sy = ((i * 97) % (H * .58));
+    ctx.fillRect(sx, sy, 1, 1);
+  }
+}
+
+function drawGround() {
+  ctx.fillStyle = '#0b0b18';
+  ctx.fillRect(0, GROUND, W, H - GROUND);
+
+  /* subtle lane marks */
+  for (let x = (-(CAM_X % 90) + 90) % 90; x < W; x += 90) {
+    ctx.strokeStyle = 'rgba(255,107,0,.05)';
+    ctx.lineWidth   = 1;
+    ctx.beginPath(); ctx.moveTo(x, GROUND); ctx.lineTo(x, H); ctx.stroke();
+  }
+
+  /* ground line glow */
+  ctx.strokeStyle = '#ff6b0077'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, GROUND); ctx.lineTo(W, GROUND); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,107,0,.12)'; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(0, GROUND); ctx.lineTo(W, GROUND); ctx.stroke();
+}
+
+function drawRamp(ramp) {
+  const rx = ramp.x - CAM_X;
+  if (rx + ramp.w < 0 || rx > W) return;
+
+  /* build curve path */
+  ctx.save();
+  ctx.beginPath();
+  let first = true;
+  for (let i = 0; i <= 54; i++) {
+    const t  = i / 54;
+    const wx = rx + t * ramp.w;
+    const wy = ramp.dir === 1
+      ? ramp.y - Math.sin(t * Math.PI / 2) * ramp.h
+      : ramp.y - Math.cos(t * Math.PI / 2) * ramp.h;
+    if (first) { ctx.moveTo(wx, wy); first = false; } else ctx.lineTo(wx, wy);
+  }
+  ctx.lineTo(rx + ramp.w, ramp.y);
+  ctx.lineTo(rx, ramp.y);
+  ctx.closePath();
+  ctx.fillStyle = '#131322';
+  ctx.fill();
+
+  /* glowing edge */
+  ctx.beginPath(); first = true;
+  for (let i = 0; i <= 54; i++) {
+    const t  = i / 54;
+    const wx = rx + t * ramp.w;
+    const wy = ramp.dir === 1
+      ? ramp.y - Math.sin(t * Math.PI / 2) * ramp.h
+      : ramp.y - Math.cos(t * Math.PI / 2) * ramp.h;
+    if (first) { ctx.moveTo(wx, wy); first = false; } else ctx.lineTo(wx, wy);
+  }
+  ctx.strokeStyle = '#ff6b00'; ctx.lineWidth = 2.5;
+  ctx.shadowColor = '#ff6b00'; ctx.shadowBlur  = 9;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
+function drawRail(rail) {
+  const rx = rail.x - CAM_X;
+  if (rx + rail.w < 0 || rx > W) return;
+  ctx.save();
+  ctx.shadowColor = '#00e5ff'; ctx.shadowBlur = 15;
+  ctx.strokeStyle = '#00e5ff'; ctx.lineWidth   = 3;
+  ctx.beginPath(); ctx.moveTo(rx, rail.y); ctx.lineTo(rx + rail.w, rail.y); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,.3)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(rx, rail.y); ctx.lineTo(rx + rail.w, rail.y); ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  /* support posts */
+  ctx.fillStyle   = '#0d1f2d';
+  ctx.strokeStyle = 'rgba(0,229,255,.3)'; ctx.lineWidth = 1;
+  for (let x = rx + 18; x < rx + rail.w; x += 30) {
+    ctx.beginPath(); ctx.rect(x - 4, rail.y, 8, rail.h + 22);
+    ctx.fill(); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawWall(wall) {
+  const rx = wall.x - CAM_X;
+  if (rx + wall.w < 0 || rx > W) return;
+  ctx.save();
+  ctx.fillStyle   = '#1a1a30';
+  ctx.fillRect(rx, wall.y, wall.w, wall.h);
+  ctx.strokeStyle = 'rgba(255,107,0,.35)'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(rx, wall.y, wall.w, wall.h);
+  ctx.restore();
+}
+
+function drawSkater() {
+  const sx = sk.x - CAM_X;
+  const sy = sk.y;
+
+  ctx.save();
+  ctx.translate(sx + sk.w / 2, sy + sk.h / 2);
+  ctx.scale(sk.facing, 1);
+  if (sk.spinning) ctx.rotate(sk.spinAngle * Math.PI / 180);
+
+  ctx.shadowColor = '#00e5ff'; ctx.shadowBlur = 20;
+
+  /* head */
+  ctx.fillStyle = '#ff6b00';
+  ctx.beginPath(); ctx.arc(0, -sk.h / 2 + 5, 7, 0, Math.PI * 2); ctx.fill();
+
+  /* body */
+  ctx.fillStyle = '#00e5ff';
+  ctx.fillRect(-6, -sk.h / 2 + 12, 12, 12);
+
+  /* legs */
+  ctx.fillStyle = '#1a3a5c';
+  ctx.fillRect(-6, -sk.h / 2 + 24, 5, 9);
+  ctx.fillRect( 1, -sk.h / 2 + 24, 5, 9);
+
+  /* shoes */
+  ctx.fillStyle = '#aaa';
+  ctx.fillRect(-7, -sk.h / 2 + 32, 6, 4);
+  ctx.fillRect( 1, -sk.h / 2 + 32, 6, 4);
+
+  /* board */
+  const by = sk.h / 2 - 3;
+  ctx.save();
+  if (sk.flipping) ctx.rotate(sk.flipAngle * Math.PI / 180);
+  ctx.fillStyle   = '#ff6b00';
+  ctx.shadowColor = '#ff6b00'; ctx.shadowBlur = 9;
+  ctx.fillRect(-13, by - 4, 26, 5);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(-12, by - 3, 24, 3);
+  ctx.restore();
+
+  /* manual nose indicator */
+  if (sk.onManual) {
+    ctx.fillStyle = 'rgba(255,107,0,.8)';
+    ctx.fillRect(8, by - 9, 3, 9);
+  }
+
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
+  /* ground shadow ellipse */
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,229,255,.09)';
+  ctx.beginPath();
+  ctx.ellipse(sx + sk.w / 2, GROUND + 3, 18, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  /* grind sparks */
+  if (sk.onRail) {
+    ctx.save();
+    ctx.strokeStyle = '#00e5ff'; ctx.lineWidth = 2;
+    ctx.shadowColor = '#00e5ff'; ctx.shadowBlur = 12;
+    for (let i = 0; i < 3; i++) {
+      const px = sx + sk.w / 2 + (Math.random() - .5) * 18;
+      const py = sy + sk.h + Math.random() * 5;
+      ctx.beginPath(); ctx.arc(px, py, 1.8, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillStyle   = p.color;
+    ctx.shadowColor = p.color; ctx.shadowBlur = 7;
+    ctx.beginPath();
+    ctx.arc(p.x - CAM_X, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+}
+
+function drawFloatTexts() {
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.font = '900 16px Arial Black, sans-serif';
+  for (const f of floatTexts) {
+    ctx.globalAlpha = Math.max(0, f.life);
+    ctx.fillStyle   = f.col;
+    ctx.fillText(f.text, f.x - CAM_X, f.y);
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+/* ─────────────────────────────────────────────
+   MAIN LOOP
+───────────────────────────────────────────── */
+let lastTs = 0;
+function loop(ts) {
+  const dt = ts - lastTs;
+  lastTs   = ts;
+
+  if (dt < 120) {
+    update();
+    drawBg();
+    drawGround();
+    for (const w of WALLS) drawWall(w);
+    for (const r of RAMPS) drawRamp(r);
+    for (const r of RAILS) drawRail(r);
+    drawParticles();
+    drawSkater();
+    drawFloatTexts();
+  }
+
+  requestAnimationFrame(loop);
+}
+
+/* ─────────────────────────────────────────────
+   GAME START / END
+───────────────────────────────────────────── */
+function startGame() {
+  score       = 0; comboScore = 0; multiplier = 1; combo = 0;
+  specialMeter = 0; specialReady = false; timeLeft = 120;
+  particles.length = 0; floatTexts.length = 0;
+  lastTrick = ''; sk.airTricks = [];
+
+  document.getElementById('special-fill').style.width       = '0%';
+  document.getElementById('special-ready').textContent       = '';
+  document.getElementById('score-val').textContent           = '0';
+  document.getElementById('combo-pts').textContent           = '';
+  document.getElementById('trick-name').textContent          = '';
+  document.getElementById('combo-info').textContent          = '';
+  document.getElementById('mult-info').textContent           = '';
+  document.getElementById('timer-val').textContent           = '2:00';
+  document.getElementById('timer-val').className             = '';
+  document.getElementById('balance-wrap').style.display      = 'none';
+  document.getElementById('trick-flash-text').style.opacity  = '0';
+  document.getElementById('screen-overlay').classList.add('hidden');
+
+  buildLevel();
+  gameRunning = true;
+
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    if (!gameRunning) return;
+    timeLeft--;
+    const m  = Math.floor(timeLeft / 60);
+    const s  = timeLeft % 60;
+    const tv = document.getElementById('timer-val');
+    tv.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    tv.className   = timeLeft <= 15 ? 'urgent' : '';
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      gameRunning = false;
+      endGame();
+    }
+  }, 1000);
+}
+
+function endGame() {
+  landCombo(false);
+  const final = score;
+  highScores.push(final);
+  highScores.sort((a, b) => b - a);
+  highScores = highScores.slice(0, 5);
+
+  document.getElementById('overlay-title').textContent = "TIME'S UP!";
+  document.getElementById('overlay-sub').textContent   = 'Final Score: ' + final.toLocaleString();
+
+  let hs = '<br>HIGH SCORES<br>';
+  highScores.forEach((s, i) => { hs += `${i + 1}. <span>${s.toLocaleString()}</span><br>`; });
+  document.getElementById('overlay-scores').innerHTML = hs;
+  document.getElementById('start-btn').textContent    = 'PLAY AGAIN';
+  document.getElementById('screen-overlay').classList.remove('hidden');
+}
+
+/* ─────────────────────────────────────────────
+   BOOT
+───────────────────────────────────────────── */
+document.getElementById('start-btn').addEventListener('click', startGame);
+buildLevel();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
