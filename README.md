@@ -111,8 +111,8 @@ I'm a browser game developer focused on recreating the feel of iconic console an
 
 I'm open to game dev roles, freelance work, and game jams.
 
-- 🌐 Portfolio: https://yourusername.github.io
-- 📬 Email: you@email.com
+- 🌐 Portfolio: file:///C:/Users/Ivan/Downloads/portfolio.html
+- 📬 Email: elmontro201@gmail.com
 - 💼 LinkedIn: https://linkedin.com/in/yourhandle
 
 ---
