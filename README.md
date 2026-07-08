@@ -1,47 +1,75 @@
 # 🎮 Ivan's Browser Game Portfolio
 
-Hey! Welcome to my portfolio repository. I'm a browser game developer who builds fully playable games that run directly in your browser — no downloads, no installs, no setup. Just click a link and play.
-
-Every game in this repo is a **single self-contained HTML file.** That means all the game logic, physics, sound, and visuals are written from scratch in one place using nothing but HTML5, JavaScript, and the Web Audio API.
+> 6 fully playable browser games — no downloads, no installs, just click and play.
 
 ---
 
-## 🕹️ How to Play
+## 🚀 [Click Here to View My Live Portfolio & Play All 6 Games](https://yourusername.github.io)
 
-You have two options:
+---
 
-**Option 1 — Play online (recommended)**  
-Visit the live portfolio: file:///C:/Users/Ivan/Downloads/portfolio.html  
+## 🕹️ Play the Games
+
+| Game | Genre | Play Now |
+|---|---|---|
+| 🕷️ Web Rush | Action / Traversal | [▶ Play](https://yourusername.github.io/spiderman_swing.html) |
+| ⚔️ Spartan's Wrath | Action RPG | [▶ Play](https://yourusername.github.io/god_of_war_rpg.html) |
+| 🛹 Skate or Die | Skateboarding | [▶ Play](https://yourusername.github.io/skate_game.html) |
+| 🏀 Blacktop Brawlers | Arcade Sports | [▶ Play](https://yourusername.github.io/BlactopBrawlers.html) |
+| 🐉 Dragon Battle Z | Fighting | [▶ Play](https://yourusername.github.io/DragonBattleZ.html) |
+| 🎮 Super Claudeo Bros | Platformer | [▶ Play](https://yourusername.github.io/SuperClaudeo.html) |
+
+---
+
+## 👋 Welcome
+
+Hey! I'm Ivan, a browser game developer who builds fully playable games that run directly in your browser. Every game in this repo is a **single self-contained HTML file** — all the game logic, physics, sound, and visuals written from scratch using nothing but HTML5, JavaScript, and the Web Audio API.
+
+No frameworks. No game engines. No npm. Open the file and it runs.
+
+---
+
+## 📖 How to Play
+
+**Option 1 — Play online *(recommended)***
+
+[🌐 **Visit my live portfolio →**](https://yourusername.github.io)
+
 Click any game card and it opens instantly in your browser.
 
-**Option 2 — Run locally**  
-1. Click the green **Code** button on this page
+**Option 2 — Run locally**
+
+1. Click the green **Code** button above
 2. Select **Download ZIP**
 3. Unzip the folder
-4. Open any `.html` file directly in your browser — that's it
+4. Open any `.html` file in your browser — done
 
 No terminal. No `npm install`. No server needed.
 
 ---
 
-## 🗂️ What's in this repo
+## 🗂️ Files in this Repo
 
-| File | Game | Genre |
-|---|---|---|
-| `spiderman_swing.html` | Web Rush | Action / Traversal |
-| `god_of_war_rpg.html` | Spartan's Wrath | Action RPG |
-| `skate_game.html` | Skate or Die | Skateboarding |
-| `BlactopBrawlers.html` | Blacktop Brawlers | Arcade Sports |
-| `DragonBattleZ.html` | Dragon Battle Z | Fighting |
-| `SuperClaudeo.html` | Super Claudeo Bros | Platformer |
-| `index.html` | Portfolio site | — |
+| File | Game |
+|---|---|
+| `spiderman_swing.html` | 🕷️ Web Rush |
+| `god_of_war_rpg.html` | ⚔️ Spartan's Wrath |
+| `skate_game.html` | 🛹 Skate or Die |
+| `BlactopBrawlers.html` | 🏀 Blacktop Brawlers |
+| `DragonBattleZ.html` | 🐉 Dragon Battle Z |
+| `SuperClaudeo.html` | 🎮 Super Claudeo Bros |
+| `index.html` | 🌐 Portfolio site |
 
 ---
 
 ## 🕷️ Web Rush
 *Inspired by Spider-Man*
 
-Swing through the city using real pendulum physics. Your web anchors to whatever surface you aim at, and your momentum carries you forward. Take out enemies mid-swing, collect pickups, and chain combos to top the leaderboard. Every sound — the web snap, the thwip, the crunch of a landing — is generated live in code. No audio files anywhere.
+[▶ **Play Web Rush**](https://yourusername.github.io/spiderman_swing.html)
+
+Swing through the city using real pendulum physics. Your web anchors to any surface, your momentum carries you forward, and every sound — the snap, the thwip, the crunch of a landing — is generated live in code with the Web Audio API. No audio files anywhere.
+
+**Features:** Physics-based swinging · Enemy AI · Combo multiplier · Persistent leaderboard · Procedural sound
 
 **Controls:** `Mouse` to aim and shoot web · `Space` to release
 
@@ -50,7 +78,11 @@ Swing through the city using real pendulum physics. Your web anchors to whatever
 ## ⚔️ Spartan's Wrath
 *Inspired by God of War*
 
-Fight through 6 waves of enemies with a full combat system — attack, block, dodge, and 4 unlockable skills. The difficulty escalates wave by wave and ends with boss encounters against Ares and Zeus. Land enough hits to fill your Rage meter and unleash your most powerful move.
+[▶ **Play Spartan's Wrath**](https://yourusername.github.io/god_of_war_rpg.html)
+
+Fight through 6 waves of enemies with a full combat system — attack, block, dodge, and 4 unlockable skills. Ends with boss battles against Ares and Zeus. Fill your Rage meter to unleash your most powerful move.
+
+**Features:** 6 enemy waves · 2 boss encounters · 4 active skills · Rage meter · Particle hit effects
 
 **Controls:** `A` Attack · `S` Block · `D` Dodge · `1–4` Skills
 
@@ -59,16 +91,24 @@ Fight through 6 waves of enemies with a full combat system — attack, block, do
 ## 🛹 Skate or Die
 *Inspired by Tony Hawk's Pro Skater*
 
-You have 2 minutes. Hit quarter-pipes, grind rails, pull off manuals, and land wallrides to stack your combo multiplier as high as it'll go. Bail and you lose your combo. The trick meter fills a special move slot — use it at the right moment. Your best scores are saved to a local leaderboard.
+[▶ **Play Skate or Die**](https://yourusername.github.io/skate_game.html)
 
-**Controls:** `Arrow keys` to move · `Z X C` for tricks · `S` Manual
+2 minutes. Quarter-pipes, grind rails, manuals, and wallrides. Stack your combo multiplier as high as it'll go — bail and lose it all. Your best scores are saved to a local leaderboard.
+
+**Features:** Quarter-pipe physics · Grindable rails · Manual balancing · Special meter · 120-second runs · High-score table
+
+**Controls:** `Arrow keys` to move · `Z X C` Tricks · `S` Manual
 
 ---
 
 ## 🏀 Blacktop Brawlers
 *Inspired by NBA Street Vol. 2*
 
-3-on-3 street basketball with 8 characters, each with unique stats and a signature special move. The CPU reads the game — it knows when to drive for a dunk, when to pull up for three, and when to get aggressive if it's losing. Pick your squad, choose a court, and run it.
+[▶ **Play Blacktop Brawlers**](https://yourusername.github.io/BlactopBrawlers.html)
+
+3-on-3 street basketball with 8 characters, each with unique stats and a signature special. The CPU reads the game — it knows when to drive, when to pull up for three, and when to go clutch if it's losing. Pick your squad, choose a court, run it.
+
+**Features:** 8 characters with unique stats · CPU shot-selection AI · 3 court themes · Special moves · Procedural crowd audio
 
 **Controls:** `Arrow keys` to move · `Z` Pass · `X` Shoot · `C` Special
 
@@ -77,7 +117,11 @@ You have 2 minutes. Hit quarter-pipes, grind rails, pull off manuals, and land w
 ## 🐉 Dragon Battle Z
 *Inspired by Dragon Ball Sparking Zero*
 
-1v1 fighter with a full ki system. Build meter by landing hits, spend it on ki blasts, or hold it for a fully charged Ultimate Move. Fights go aerial — double jump into combos and juggle your opponent. Best of 3 rounds wins. Every punch, blast, and super is a layered synthesized sound built with the Web Audio API.
+[▶ **Play Dragon Battle Z**](https://yourusername.github.io/DragonBattleZ.html)
+
+1v1 fighter with a full ki system. Build meter by landing hits, spend it on ki blasts, or charge a full Ultimate Move. Fights go aerial — double jump into combos and juggle your opponent mid-air. Best of 3 rounds wins.
+
+**Features:** Ki meter system · Melee combos · Ranged ki blasts · Charged Ultimate Move · Aerial combat · Synthesized hit sounds
 
 **Controls:** `Arrow keys` to move · `Z` Punch · `X` Ki Blast · `C` Ultimate
 
@@ -86,41 +130,47 @@ You have 2 minutes. Hit quarter-pipes, grind rails, pull off manuals, and land w
 ## 🎮 Super Claudeo Bros
 *Inspired by Super Mario Bros*
 
-A classic side-scrolling platformer with a scrolling camera, parallax backgrounds, enemies to stomp, coins to collect, question blocks to hit, and a lives system. Built entirely on canvas with no libraries — every frame is drawn by hand.
+[▶ **Play Super Claudeo Bros**](https://yourusername.github.io/SuperClaudeo.html)
 
-**Controls:** `Arrow keys` to move · `Space` to jump
+A side-scrolling platformer with a scrolling camera, parallax backgrounds, enemies to stomp, coins to collect, question blocks to hit, and a lives system. Every frame drawn by hand on canvas — no libraries.
 
----
+**Features:** Scrolling levels · Parallax backgrounds · Enemy stomp · Coin collection · Lives system · Particle effects
 
-## 🛠️ How it's built
-
-If you're a developer and want to look under the hood, here's the approach used across every game:
-
-- **HTML5 Canvas** handles all the rendering — characters, backgrounds, particles, and UI are all drawn with the 2D canvas API every frame
-- **Vanilla JavaScript** powers the game logic — physics, collision detection, enemy AI, state machines, and combo systems, all written from scratch
-- **Web Audio API** generates every sound effect in real time using oscillators, frequency envelopes, and layered waveforms — no audio files are loaded anywhere
-- **localStorage** saves leaderboards and high scores between sessions
-
-There are no frameworks, no game engines, no external libraries, and no build tools. The goal was to prove that a genuinely fun, polished game experience is achievable with just the platform itself.
+**Controls:** `Arrow keys` to move · `Space` Jump
 
 ---
 
-## 👤 About me
+## 🛠️ How It's Built
 
-I'm a browser game developer focused on recreating the feel of iconic console and arcade games in the browser. I care about getting the details right — the screen shake that lands with a punch, the combo system that makes you want one more run, the sound design that sells every hit without a single audio file.
+Every game uses the same zero-dependency approach:
 
-I'm open to game dev roles, freelance work, and game jams.
+| Technology | What it does |
+|---|---|
+| **HTML5 Canvas** | All rendering — characters, backgrounds, particles, UI |
+| **Vanilla JavaScript** | Physics, collision, enemy AI, state machines, combos |
+| **Web Audio API** | Every sound effect, synthesized live — no audio files |
+| **localStorage** | Persistent leaderboards and high scores |
 
-- 🌐 Portfolio: file:///C:/Users/Ivan/Downloads/portfolio.html
-- 📬 Email: elmontro201@gmail.com
-- 💼 LinkedIn: https://linkedin.com/in/yourhandle
+No React. No Unity. No npm. No build step. The constraint of keeping everything in one file forced real solutions — and that's the point.
+
+---
+
+## 👤 About Me
+
+I'm a browser game developer focused on recreating the feel of iconic console and arcade games in the browser. I care about the details — screen shake that lands with a punch, combo systems that make you want one more run, and sound design that sells every hit without a single audio file.
+
+Open to game dev roles, freelance work, and game jams.
+
+- 🌐 **Portfolio:** [yourusername.github.io](https://yourusername.github.io)
+- 📬 **Email:** [you@email.com](mailto:you@email.com)
+- 💼 **LinkedIn:** [linkedin.com/in/yourhandle](https://linkedin.com/in/yourhandle)
 
 ---
 
 ## 📄 License
 
-All games and code in this repository were written by me. Feel free to look through the code and learn from it. Please don't re-upload or redistribute the games as your own work.
+All games and code in this repository were written by me. Feel free to read through the code and learn from it. Please don't re-upload or redistribute the games as your own work.
 
 ---
 
-*Thanks for stopping by — hope you enjoy the games!*
+*Thanks for stopping by — hope you enjoy the games!* 🎮
