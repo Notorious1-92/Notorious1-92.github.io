@@ -11,7 +11,7 @@ Every game in this repo is a **single self-contained HTML file.** That means all
 You have two options:
 
 **Option 1 — Play online (recommended)**  
-Visit the live portfolio: **https://yourusername.github.io**  
+Visit the live portfolio: **https://Notorious1.github.io**  
 Click any game card and it opens instantly in your browser.
 
 **Option 2 — Run locally**  
