@@ -162,7 +162,7 @@ I'm a browser game developer focused on recreating the feel of iconic console an
 Open to game dev roles, freelance work, and game jams.
 
 - 🌐 **Portfolio:** [Notorious1-92.github.io](https://Notorious1-92.github.io)
-- 📬 **Email:** [you@email.com](elmontro201@gmail.com)
+- 📬 **Email:** [elmontro201@gmail.com](elmontro201@gmail.com)
 - 💼 **LinkedIn:** [linkedin.com/in/yourhandle](https://linkedin.com/in/yourhandle)
 
 ---
