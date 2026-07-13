@@ -4,7 +4,7 @@
 
 ---
 
-## 🚀 [Click Here to View My Live Portfolio & Play All 6 Games](https://yourusername.github.io)
+## 🚀 [Click Here to View My Live Portfolio & Play All 6 Games](https://Notorious1-92.github.io)
 
 ---
 
@@ -12,12 +12,12 @@
 
 | Game | Genre | Play Now |
 |---|---|---|
-| 🕷️ Web Rush | Action / Traversal | [▶ Play](https://yourusername.github.io/spiderman_swing.html) |
-| ⚔️ Spartan's Wrath | Action RPG | [▶ Play](https://yourusername.github.io/god_of_war_rpg.html) |
-| 🛹 Skate or Die | Skateboarding | [▶ Play](https://yourusername.github.io/skate_game.html) |
-| 🏀 Blacktop Brawlers | Arcade Sports | [▶ Play](https://yourusername.github.io/BlactopBrawlers.html) |
-| 🐉 Dragon Battle Z | Fighting | [▶ Play](https://yourusername.github.io/DragonBattleZ.html) |
-| 🎮 Super Claudeo Bros | Platformer | [▶ Play](https://yourusername.github.io/SuperClaudeo.html) |
+| 🕷️ Web Rush | Action / Traversal | [▶ Play](https://Notorious1-92.github.io/spiderman_swing.html) |
+| ⚔️ Spartan's Wrath | Action RPG | [▶ Play](https://Notorious1-92.github.io/god_of_war_rpg.html) |
+| 🛹 Skate or Die | Skateboarding | [▶ Play](https://Notorious1-92.github.io/skate_game.html) |
+| 🏀 Blacktop Brawlers | Arcade Sports | [▶ Play](https://Notorious1-92.github.io/BlactopBrawlers.html) |
+| 🐉 Dragon Battle Z | Fighting | [▶ Play](https://Notorious1-92.github.io/DragonBattleZ.html) |
+| 🎮 Super Claudeo Bros | Platformer | [▶ Play](https://Notorious1-92.github.io/mario_game%20(1).html) |
 
 ---
 
@@ -33,7 +33,7 @@ No frameworks. No game engines. No npm. Open the file and it runs.
 
 **Option 1 — Play online *(recommended)***
 
-[🌐 **Visit my live portfolio →**](https://yourusername.github.io)
+[🌐 **Visit my live portfolio →**](https://Notorious1-92.github.io)
 
 Click any game card and it opens instantly in your browser.
 
@@ -65,7 +65,7 @@ No terminal. No `npm install`. No server needed.
 ## 🕷️ Web Rush
 *Inspired by Spider-Man*
 
-[▶ **Play Web Rush**](https://yourusername.github.io/spiderman_swing.html)
+[▶ **Play Web Rush**](https://Notorious1-92.github.io/spiderman_swing.html)
 
 Swing through the city using real pendulum physics. Your web anchors to any surface, your momentum carries you forward, and every sound — the snap, the thwip, the crunch of a landing — is generated live in code with the Web Audio API. No audio files anywhere.
 
@@ -78,7 +78,7 @@ Swing through the city using real pendulum physics. Your web anchors to any surf
 ## ⚔️ Spartan's Wrath
 *Inspired by God of War*
 
-[▶ **Play Spartan's Wrath**](https://yourusername.github.io/god_of_war_rpg.html)
+[▶ **Play Spartan's Wrath**](https://Notorious1-92.github.io/god_of_war_rpg.html)
 
 Fight through 6 waves of enemies with a full combat system — attack, block, dodge, and 4 unlockable skills. Ends with boss battles against Ares and Zeus. Fill your Rage meter to unleash your most powerful move.
 
@@ -91,7 +91,7 @@ Fight through 6 waves of enemies with a full combat system — attack, block, do
 ## 🛹 Skate or Die
 *Inspired by Tony Hawk's Pro Skater*
 
-[▶ **Play Skate or Die**](https://yourusername.github.io/skate_game.html)
+[▶ **Play Skate or Die**](https://Notorious1-92.github.io/skate_game.html)
 
 2 minutes. Quarter-pipes, grind rails, manuals, and wallrides. Stack your combo multiplier as high as it'll go — bail and lose it all. Your best scores are saved to a local leaderboard.
 
@@ -104,7 +104,7 @@ Fight through 6 waves of enemies with a full combat system — attack, block, do
 ## 🏀 Blacktop Brawlers
 *Inspired by NBA Street Vol. 2*
 
-[▶ **Play Blacktop Brawlers**](https://yourusername.github.io/BlactopBrawlers.html)
+[▶ **Play Blacktop Brawlers**](https://Notorious1-92.github.io/BlactopBrawlers.html)
 
 3-on-3 street basketball with 8 characters, each with unique stats and a signature special. The CPU reads the game — it knows when to drive, when to pull up for three, and when to go clutch if it's losing. Pick your squad, choose a court, run it.
 
@@ -117,7 +117,7 @@ Fight through 6 waves of enemies with a full combat system — attack, block, do
 ## 🐉 Dragon Battle Z
 *Inspired by Dragon Ball Sparking Zero*
 
-[▶ **Play Dragon Battle Z**](https://yourusername.github.io/DragonBattleZ.html)
+[▶ **Play Dragon Battle Z**](https://Notorious1-92.github.io/DragonBattleZ.html)
 
 1v1 fighter with a full ki system. Build meter by landing hits, spend it on ki blasts, or charge a full Ultimate Move. Fights go aerial — double jump into combos and juggle your opponent mid-air. Best of 3 rounds wins.
 
@@ -130,7 +130,7 @@ Fight through 6 waves of enemies with a full combat system — attack, block, do
 ## 🎮 Super Claudeo Bros
 *Inspired by Super Mario Bros*
 
-[▶ **Play Super Claudeo Bros**](https://yourusername.github.io/SuperClaudeo.html)
+[▶ **Play Super Claudeo Bros**](https://Notorious1-92.github.io/mario_game%20(1).html)
 
 A side-scrolling platformer with a scrolling camera, parallax backgrounds, enemies to stomp, coins to collect, question blocks to hit, and a lives system. Every frame drawn by hand on canvas — no libraries.
 
@@ -161,8 +161,8 @@ I'm a browser game developer focused on recreating the feel of iconic console an
 
 Open to game dev roles, freelance work, and game jams.
 
-- 🌐 **Portfolio:** [yourusername.github.io](](https://github.com/Notorious1-92/Notorious1.github.io/tree/main))
-- 📬 **Email:** [you@email.com](Elmontro201@gmail.com)
+- 🌐 **Portfolio:** [Notorious1-92.github.io](https://Notorious1-92.github.io)
+- 📬 **Email:** [you@email.com](elmontro201@gmail.com)
 - 💼 **LinkedIn:** [linkedin.com/in/yourhandle](https://linkedin.com/in/yourhandle)
 
 ---
